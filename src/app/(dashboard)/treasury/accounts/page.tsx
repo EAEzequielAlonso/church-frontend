@@ -35,8 +35,12 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
+import { useRouter } from 'next/navigation';
+import { QuickAccountDialog } from '../quick-account-dialog';
+
 export default function AccountsManagementPage() {
     const { churchId } = useAuth();
+    const router = useRouter();
     const [accounts, setAccounts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -95,7 +99,7 @@ export default function AccountsManagementPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('¿Estás seguro de eliminar esta cuenta? Esto podría causar inconsistencias si tiene movimientos asociados.')) return;
+        if (!confirm('¿Estás seguro de eliminar esta cuenta?')) return;
 
         try {
             const token = localStorage.getItem('accessToken');
@@ -103,12 +107,16 @@ export default function AccountsManagementPage() {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            
             if (res.ok) {
                 toast.success('Cuenta eliminada');
                 fetchData();
+            } else {
+                const errorData = await res.json();
+                toast.error(errorData.message || 'Error al eliminar la cuenta');
             }
         } catch (error) {
-            toast.error('Error al eliminar');
+            toast.error('Error de conexión');
         }
     };
 
@@ -125,24 +133,24 @@ export default function AccountsManagementPage() {
         <div className="space-y-6 max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => window.location.href = '/treasury'} className="rounded-full">
+                    <Button variant="ghost" size="icon" onClick={() => router.push('/treasury')} className="rounded-full">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-800">Cuentas y Categorías</h1>
-                        <p className="text-sm font-medium text-slate-500">Administra la estructura contable de tu iglesia.</p>
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-800">Configuración</h1>
+                        <p className="text-sm font-medium text-slate-500">Administra cuentas reales y categorías contables.</p>
                     </div>
                 </div>
                 <div className="flex gap-3">
-                    <Dialog>
-                        <DialogTrigger asChild>
+                    <QuickAccountDialog
+                        onSuccess={fetchData}
+                        trigger={
                             <Button className="bg-primary hover:bg-primary/90 text-white font-bold px-6 shadow-lg shadow-primary/20 rounded-xl">
                                 <Plus className="w-4 h-4 mr-2" />
-                                Nueva Cuenta
+                                Crear Nuevo
                             </Button>
-                        </DialogTrigger>
-                        <AccountDialogContent onSave={handleSave} isSaving={isSaving} />
-                    </Dialog>
+                        }
+                    />
                 </div>
             </div>
 

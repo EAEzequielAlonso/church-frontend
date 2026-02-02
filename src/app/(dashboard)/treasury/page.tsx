@@ -9,8 +9,11 @@ import { QuickAccountDialog } from './quick-account-dialog';
 import { NewTransactionDialog } from './new-transaction-dialog';
 import { EditTransactionDialog } from './edit-transaction-dialog';
 
+import { useRouter } from 'next/navigation';
+
 export default function TreasuryPage() {
     const { churchId } = useAuth();
+    const router = useRouter(); // Use Next.js router
     const [transactions, setTransactions] = useState<any[]>([]);
     const [accounts, setAccounts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -95,20 +98,19 @@ export default function TreasuryPage() {
                     </h1>
                     <div className="flex items-center gap-3 mt-2">
                         <p className="text-slate-500 font-medium tracking-tight">Control financiero y contabilidad de la iglesia.</p>
-                        <QuickAccountDialog onSuccess={fetchData} />
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="hidden md:flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-200">
-                        <Button variant="ghost" size="sm" onClick={() => window.location.href = '/treasury/accounts'} className="text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg transition-all px-3">
-                            Cuentas
+                        <Button variant="ghost" size="sm" onClick={() => router.push('/treasury/accounts')} className="text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg transition-all px-3">
+                            Configuración
                         </Button>
                         <div className="h-4 w-px bg-slate-300/50 mx-1" />
-                        <Button variant="ghost" size="sm" onClick={() => window.location.href = '/treasury/budgets'} className="text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg transition-all px-3">
+                        <Button variant="ghost" size="sm" onClick={() => router.push('/treasury/budgets')} className="text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg transition-all px-3">
                             Presupuestos
                         </Button>
                         <div className="h-4 w-px bg-slate-300/50 mx-1" />
-                        <Button variant="ghost" size="sm" onClick={() => window.location.href = '/treasury/reports'} className="text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg transition-all px-3">
+                        <Button variant="ghost" size="sm" onClick={() => router.push('/treasury/reports')} className="text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg transition-all px-3">
                             Reportes
                         </Button>
                     </div>

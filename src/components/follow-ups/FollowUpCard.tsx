@@ -3,7 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, CheckCircle, Trash2, ShieldAlert, Phone, Mail, Calendar, User } from 'lucide-react';
+import { UserPlus, CheckCircle, Trash2, Phone, Mail, Calendar, User, MoreVertical, EyeOff } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -21,9 +21,10 @@ interface FollowUpCardProps {
     person: any;
     onAssign: (person: any) => void;
     onStatusChange: (id: string, status: string) => void;
+    onDelete?: (person: any) => void; // Optional for backward compatibility or strict typing
 }
 
-export default function FollowUpCard({ person, onAssign, onStatusChange }: FollowUpCardProps) {
+export default function FollowUpCard({ person, onAssign, onStatusChange, onDelete }: FollowUpCardProps) {
     const { user } = useAuth();
 
     // Permission Logic
@@ -55,9 +56,9 @@ export default function FollowUpCard({ person, onAssign, onStatusChange }: Follo
                     {canManage && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600">
                                     <span className="sr-only">Open menu</span>
-                                    <ShieldAlert className="h-4 w-4 text-slate-400 hover:text-indigo-600" />
+                                    <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -80,11 +81,16 @@ export default function FollowUpCard({ person, onAssign, onStatusChange }: Follo
                                 <DropdownMenuSeparator />
                                 {person.status !== 'HIDDEN' ? (
                                     <DropdownMenuItem onClick={() => onStatusChange(person.id, 'HIDDEN')} className="text-slate-500">
-                                        <Trash2 className="mr-2 h-4 w-4" /> Ocultar
+                                        <EyeOff className="mr-2 h-4 w-4" /> Ocultar
                                     </DropdownMenuItem>
                                 ) : (
                                     <DropdownMenuItem onClick={() => onStatusChange(person.id, 'ACTIVE')}>
                                         <CheckCircle className="mr-2 h-4 w-4" /> Mostrar
+                                    </DropdownMenuItem>
+                                )}
+                                {onDelete && (
+                                    <DropdownMenuItem onClick={() => onDelete(person)} className="text-red-600 focus:text-red-700 focus:bg-red-50">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar Definitivamente
                                     </DropdownMenuItem>
                                 )}
                             </DropdownMenuContent>

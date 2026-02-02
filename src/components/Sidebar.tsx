@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { SystemRole, FunctionalRole } from '@/types/auth-types';
 import {
     LayoutDashboard,
     Users,
@@ -29,56 +30,68 @@ import { useAuth } from '@/context/AuthContext';
 
 import { useSidebar } from '@/context/SidebarContext';
 
-const menuGroups = [
-    {
-        label: 'Principal',
-        items: [
-            { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-            { name: 'Mi Agenda', href: '/agenda', icon: Calendar },
-        ]
-    },
-    {
-        label: 'Gestión',
-        items: [
-            { name: 'Miembros', href: '/members', icon: Users },
-            { name: 'Cultos', href: '/worship', icon: Music },
-            { name: 'Actividades', href: '/activities', icon: Map },
-            { name: 'Grupos Pequeños', href: '/groups', icon: Users },
-            { name: 'Ministerios', href: '/ministries', icon: Users },
-            { name: 'Familias', href: '/families', icon: Users },
-            { name: 'Discipulados', href: '/discipleship', icon: GraduationCap },
-            { name: 'Cursos', href: '/courses', icon: BookOpen },
-        ]
-    },
-    {
-        label: 'Cuidado',
-        items: [
-            { name: 'Acompañamiento', href: '/counseling', icon: HeartHandshake },
-            { name: 'Seguimiento', href: '/follow-ups', icon: UserPlus },
-            { name: 'Muro de Oración', href: '/prayers', icon: HeartHandshake },
-        ]
-    },
-    {
-        label: 'Recursos',
-        items: [
-            { name: 'Biblioteca', href: '/library', icon: Book },
-            { name: 'Inventario', href: '/inventory', icon: Package },
-            { name: 'Tesorería', href: '/treasury', icon: Wallet },
-        ]
-    },
-    {
-        label: 'Sistema',
-        items: [
-            { name: 'Suscripción', href: '/subscription', icon: Wallet },
-            { name: 'Configuración', href: '/settings', icon: Settings },
-        ]
-    }
-];
-
 export function Sidebar() {
     const pathname = usePathname();
     const { isOpen, toggleSidebar, isMobileOpen, toggleMobileSidebar } = useSidebar();
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
+
+    // Helper to check roles (Now checks Functional Roles or Permissions if passed)
+    const hasRole = (roles: string[]) => {
+        if (!user) return false;
+        // Platform Admin (Superuser)
+        if (user.systemRole === SystemRole.ADMIN_APP) return true;
+        // Church Admin (Functional Role)
+        if (user.roles?.includes(FunctionalRole.ADMIN_CHURCH)) return true;
+
+        // user.roles contains FunctionalRoles (strings)
+        return roles.some(role => user.roles?.includes(role));
+    };
+
+    const menuGroups = [
+        {
+            label: 'Principal',
+            items: [
+                { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+                { name: 'Mi Agenda', href: '/agenda', icon: Calendar },
+            ]
+        },
+        {
+            label: 'Gestión',
+            items: [
+                { name: 'Miembros', href: '/members', icon: Users },
+                { name: 'Cultos', href: '/worship', icon: Music },
+                { name: 'Actividades', href: '/activities', icon: Map },
+                { name: 'Grupos Pequeños', href: '/groups', icon: Users },
+                { name: 'Ministerios', href: '/ministries', icon: Users },
+                { name: 'Familias', href: '/families', icon: Users },
+                { name: 'Discipulados', href: '/discipleship', icon: GraduationCap },
+                { name: 'Cursos', href: '/courses', icon: BookOpen },
+            ]
+        },
+        {
+            label: 'Cuidado',
+            items: [
+                { name: 'Acompañamiento', href: '/counseling', icon: HeartHandshake, show: hasRole(['ADMIN_CHURCH', 'COUNSELOR', 'PASTOR']) },
+                { name: 'Seguimiento', href: '/follow-ups', icon: UserPlus },
+                { name: 'Muro de Oración', href: '/prayers', icon: HeartHandshake },
+            ]
+        },
+        {
+            label: 'Recursos',
+            items: [
+                { name: 'Biblioteca', href: '/library', icon: Book }, // Public for all members to search/request
+                { name: 'Inventario', href: '/inventory', icon: Package },
+                { name: 'Tesorería', href: '/treasury', icon: Wallet, show: hasRole(['TREASURER', 'ADMIN_CHURCH', 'AUDITOR', 'ADMIN_APP']) }, // Functional Roles
+            ].filter(item => item.show ?? true)
+        },
+        {
+            label: 'Sistema',
+            items: [
+                { name: 'Suscripción', href: '/subscription', icon: Wallet, show: hasRole(['ADMIN_CHURCH', 'ADMIN_APP']) }, // Only Admin Church
+                { name: 'Configuración', href: '/settings', icon: Settings, show: hasRole(['ADMIN_CHURCH', 'ADMIN_APP']) },
+            ].filter(item => item.show ?? true)
+        }
+    ];
 
     return (
         <>

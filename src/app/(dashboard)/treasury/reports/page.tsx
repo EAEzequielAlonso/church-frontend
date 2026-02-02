@@ -10,15 +10,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, ArrowUpRight, ArrowDownRight, Filter, PieChart } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, ArrowDownRight, Filter, PieChart, ArrowRightLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+
+import { useRouter } from 'next/navigation';
 
 export default function ReportsPage() {
     const { churchId } = useAuth();
+    const router = useRouter();
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [year, setYear] = useState(new Date().getFullYear());
-    // const [month, setMonth] = useState(new Date().getMonth());
+    const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
     const fetchData = async () => {
         if (!churchId) return;
@@ -84,11 +87,20 @@ export default function ReportsPage() {
 
     const totalExpenseYear = expenseTxs.reduce((acc, t) => acc + Number(t.amount), 0);
 
+    // 3. Selected Month Detail
+    const selectedMonthTxs = selectedMonth !== null
+        ? transactions.filter(t => {
+            const d = new Date(t.date);
+            return d.getFullYear() === year && d.getMonth() === selectedMonth;
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        : [];
+
     return (
         <div className="space-y-8 max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
             <div className="flex items-center justify-between gap-4">
+                {/* ... (existing header) ... */}
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => window.location.href = '/treasury'} className="rounded-full">
+                    <Button variant="ghost" size="icon" onClick={() => router.push('/treasury')} className="rounded-full">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
@@ -96,7 +108,7 @@ export default function ReportsPage() {
                         <p className="text-sm font-medium text-slate-500">Visualiza el rendimiento financiero de {year}.</p>
                     </div>
                 </div>
-                <Select value={year.toString()} onValueChange={(val) => setYear(Number(val))}>
+                <Select value={year.toString()} onValueChange={(val) => { setYear(Number(val)); setSelectedMonth(null); }}>
                     <SelectTrigger className="w-[120px] font-bold bg-white text-base h-11 rounded-xl shadow-sm border-slate-200">
                         <SelectValue />
                     </SelectTrigger>
@@ -111,17 +123,27 @@ export default function ReportsPage() {
             {/* Main Chart: Monthly Trends */}
             <Card className="border-none shadow-xl shadow-slate-200/50 bg-white overflow-hidden">
                 <CardHeader className="border-b border-slate-50 pb-4">
-                    <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <PieChart className="w-5 h-5 text-primary" />
-                        Flujo de Caja Mensual
-                    </CardTitle>
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <PieChart className="w-5 h-5 text-primary" />
+                            Flujo de Caja Mensual
+                        </CardTitle>
+                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full">
+                            <ArrowUpRight className="w-3 h-3 text-slate-400" />
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Haz clic en un mes para ver el detalle</span>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="pt-8 pb-4">
                     <div className="h-[250px] w-full flex items-end justify-between gap-2 md:gap-4 px-2">
                         {monthlyData.map((d, i) => (
-                            <div key={i} className="flex flex-col items-center gap-2 w-full group relative">
+                            <div
+                                key={i}
+                                onClick={() => setSelectedMonth(i === selectedMonth ? null : i)}
+                                className={`flex flex-col items-center gap-2 w-full group relative cursor-pointer hover:bg-slate-50/80 rounded-xl p-2 transition-all ${selectedMonth === i ? 'bg-slate-50 ring-1 ring-slate-200' : ''}`}
+                            >
                                 {/* Tooltipish */}
-                                <div className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
+                                <div className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none shadow-xl">
                                     <div className="font-bold flex items-center gap-1 text-emerald-400">
                                         <ArrowUpRight className="w-3 h-3" /> +${d.income.toLocaleString()}
                                     </div>
@@ -133,21 +155,76 @@ export default function ReportsPage() {
                                 <div className="w-full flex gap-1 h-[200px] items-end justify-center">
                                     {/* Income Bar */}
                                     <div
-                                        className="w-3 md:w-6 bg-emerald-400 rounded-t-sm transition-all duration-500 hover:bg-emerald-500"
-                                        style={{ height: `${(d.income / maxVal) * 100}%` }}
+                                        className={`w-3 md:w-6 bg-emerald-400 rounded-t-sm transition-all duration-500 group-hover:bg-emerald-500 ${selectedMonth === i ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'opacity-80'}`}
+                                        style={{ height: `${maxVal > 0 ? (d.income / maxVal) * 100 : 0}%` }}
                                     />
                                     {/* Expense Bar */}
                                     <div
-                                        className="w-3 md:w-6 bg-rose-400 rounded-t-sm transition-all duration-500 hover:bg-rose-500"
-                                        style={{ height: `${(d.expense / maxVal) * 100}%` }}
+                                        className={`w-3 md:w-6 bg-rose-400 rounded-t-sm transition-all duration-500 group-hover:bg-rose-500 ${selectedMonth === i ? 'bg-rose-500 shadow-lg shadow-rose-500/20' : 'opacity-80'}`}
+                                        style={{ height: `${maxVal > 0 ? (d.expense / maxVal) * 100 : 0}%` }}
                                     />
                                 </div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{d.name}</span>
+                                <span className={`text-[10px] font-bold uppercase tracking-wider transition-colors ${selectedMonth === i ? 'text-slate-800' : 'text-slate-400'}`}>{d.name}</span>
                             </div>
                         ))}
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Selected Month Detail */}
+            {selectedMonth !== null && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                    <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+                            <CardTitle className="text-base font-bold text-slate-700 flex justify-between items-center">
+                                <span>Detalle de {months[selectedMonth]} {year}</span>
+                                <Button variant="ghost" size="sm" onClick={() => setSelectedMonth(null)} className="h-7 text-xs text-slate-400 hover:text-slate-600">Cerrar Detalle</Button>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {selectedMonthTxs.length === 0 ? (
+                                <div className="p-8 text-center text-slate-400 text-sm font-medium">No hay movimientos en este mes.</div>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {selectedMonthTxs.map(tx => {
+                                        const isIncome = tx.destinationAccount?.type === 'asset' && tx.sourceAccount?.type === 'income';
+                                        const isExpense = tx.sourceAccount?.type === 'asset' && tx.destinationAccount?.type === 'expense';
+                                        const isTransfer = tx.sourceAccount?.type === 'asset' && tx.destinationAccount?.type === 'asset';
+
+                                        return (
+                                            <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isIncome ? 'bg-emerald-100/50 text-emerald-600' :
+                                                        isExpense ? 'bg-rose-100/50 text-rose-600' :
+                                                            isTransfer ? 'bg-blue-100/50 text-blue-600' : 'bg-slate-100 text-slate-500'
+                                                        }`}>
+                                                        {isIncome ? <ArrowDownRight className="w-5 h-5" /> :
+                                                            isExpense ? <ArrowUpRight className="w-5 h-5" /> :
+                                                                isTransfer ? <ArrowRightLeft className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-700">{tx.description}</p>
+                                                        <p className="text-xs font-medium text-slate-400 capitalize">
+                                                            {new Date(tx.date).toLocaleDateString('es', { day: 'numeric', weekday: 'long' })} • {isIncome ? tx.sourceAccount?.name : tx.destinationAccount?.name}
+                                                            {isTransfer && <span className="ml-1 text-blue-400">({tx.sourceAccount?.name} <span className="text-xs">→</span> {tx.destinationAccount?.name})</span>}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span className={`font-bold text-sm ${isIncome ? 'text-emerald-600' :
+                                                    isExpense ? 'text-rose-600' :
+                                                        isTransfer ? 'text-blue-600' : 'text-slate-700'
+                                                    }`}>
+                                                    {isIncome ? '+' : isExpense ? '-' : isTransfer ? '' : ''}${Number(tx.amount).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Breakdown by Category */}
@@ -179,7 +256,9 @@ export default function ReportsPage() {
                 </Card>
 
                 {/* Summary Stats */}
+                {/* ... (stats keep same) ... */}
                 <div className="grid gap-4 content-start">
+                    {/* ... */}
                     <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 border-none shadow-lg shadow-emerald-200 text-white">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold opacity-90 uppercase tracking-widest">Ingresos Totales ({year})</CardTitle>
@@ -206,7 +285,7 @@ export default function ReportsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className={`text-4xl font-bold tracking-tight ${(monthlyData.reduce((a, b) => a + b.income, 0) - monthlyData.reduce((a, b) => a + b.expense, 0)) >= 0
-                                    ? 'text-slate-800' : 'text-rose-500'
+                                ? 'text-slate-800' : 'text-rose-500'
                                 }`}>
                                 ${(monthlyData.reduce((a, b) => a + b.income, 0) - monthlyData.reduce((a, b) => a + b.expense, 0)).toLocaleString()}
                             </div>

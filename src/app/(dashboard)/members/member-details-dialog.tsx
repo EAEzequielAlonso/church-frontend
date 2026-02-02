@@ -51,7 +51,7 @@ export function MemberDetailsDialog({ isOpen, onClose, member, loading, onEdit }
                                         </Badge>
                                     )}
 
-                                    {member.ecclesiasticalRole && member.ecclesiasticalRole !== 'NONE' && ROLE_UI_METADATA[member.ecclesiasticalRole as keyof typeof ROLE_UI_METADATA] && (
+                                    {member.ecclesiasticalRole && ROLE_UI_METADATA[member.ecclesiasticalRole as keyof typeof ROLE_UI_METADATA] && (
                                         <Badge className={ROLE_UI_METADATA[member.ecclesiasticalRole as keyof typeof ROLE_UI_METADATA].color + " border-0"}>
                                             {ROLE_UI_METADATA[member.ecclesiasticalRole as keyof typeof ROLE_UI_METADATA].label}
                                         </Badge>

@@ -59,6 +59,16 @@ export default function PrayerWallPage() {
         }
     };
 
+    const handleToggleHidden = async (id: string, isHidden: boolean) => {
+        try {
+            await api.put(`/prayers/${id}/hidden`, { isHidden });
+            toast.success(isHidden ? 'Petición ocultada' : 'Petición visible nuevamente');
+            mutate();
+        } catch (error) {
+            toast.error('Error al cambiar visibilidad');
+        }
+    };
+
     const handleDialogSuccess = () => {
         setEditingRequest(null);
         mutate();
@@ -137,6 +147,7 @@ export default function PrayerWallPage() {
                                         onEdit={handleEdit}
                                         onAnswer={handleAnswer}
                                         onStatusChange={handleStatusChange}
+                                        onToggleHidden={handleToggleHidden}
                                     />
                                 ))}
                             </div>
@@ -162,6 +173,7 @@ export default function PrayerWallPage() {
                                         onEdit={handleEdit}
                                         onAnswer={handleAnswer}
                                         onStatusChange={handleStatusChange}
+                                        onToggleHidden={handleToggleHidden}
                                     />
                                 ))}
                             </div>

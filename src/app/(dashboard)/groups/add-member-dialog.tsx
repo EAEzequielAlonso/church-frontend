@@ -98,6 +98,7 @@ export function AddMemberDialog({ open, onOpenChange, groupId, existingMemberIds
             lastName.includes(searchLower) ||
             fullName.includes(searchLower) ||
             email.includes(searchLower) ||
+            email.includes(searchLower) ||
             role.includes(searchLower);
     });
 

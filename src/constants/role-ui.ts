@@ -1,6 +1,7 @@
 import {
     MembershipStatus,
     EcclesiasticalRole,
+    FunctionalRole,
     MinistryRole,
     SmallGroupRole,
     FamilyRole,
@@ -19,11 +20,6 @@ export const ROLE_UI_METADATA = {
         description: 'Usuario estándar del sistema.'
     },
     // Membership Status
-    [MembershipStatus.PROSPECT]: {
-        label: 'Candidato',
-        color: 'bg-yellow-100 text-yellow-700',
-        description: 'En proceso de membresía o discipulado inicial.'
-    },
     [MembershipStatus.MEMBER]: {
         label: 'Miembro',
         color: 'bg-green-100 text-green-700',
@@ -65,15 +61,46 @@ export const ROLE_UI_METADATA = {
         color: 'bg-teal-100 text-teal-800',
         description: 'Servidor ordenado para asistencia práctica.'
     },
-    [EcclesiasticalRole.LEADER]: {
-        label: 'Líder',
-        color: 'bg-cyan-100 text-cyan-800',
-        description: 'Líder general de áreas o departamentos.'
-    },
     [EcclesiasticalRole.NONE]: {
         label: 'Sin Cargo',
         color: 'bg-slate-100 text-slate-500',
         description: 'Miembro sin rol eclesiástico específico.'
+    },
+    // Functional Roles
+    [FunctionalRole.ADMIN_CHURCH]: {
+        label: 'Admin Iglesia',
+        color: 'bg-rose-500 text-white shadow-sm',
+        description: 'Administrador total de la iglesia local.'
+    },
+    [FunctionalRole.TREASURER]: {
+        label: 'Tesorero',
+        color: 'bg-emerald-500 text-white shadow-sm',
+        description: 'Gestión de tesorería y finanzas.'
+    },
+    [FunctionalRole.AUDITOR]: {
+        label: 'Auditor',
+        color: 'bg-blue-500 text-white shadow-sm',
+        description: 'Visualización de finanzas y reportes.'
+    },
+    [FunctionalRole.COUNSELOR]: {
+        label: 'Consejero',
+        color: 'bg-purple-500 text-white shadow-sm',
+        description: 'Acceso a módulo de consejería.'
+    },
+    [FunctionalRole.MINISTRY_LEADER]: {
+        label: 'Líder Ministerial',
+        color: 'bg-orange-500 text-white shadow-sm',
+        description: 'Gestión de ministerios y equipos.'
+    },
+    [FunctionalRole.LIBRARIAN]: {
+        label: 'Bibliotecario',
+        color: 'bg-amber-500 text-white shadow-sm',
+        description: 'Gestión de biblioteca.'
+    },
+    [FunctionalRole.MEMBER]: {
+        label: 'Miembro',
+        color: 'bg-slate-200 text-slate-700',
+        description: 'Acceso básico de miembro.'
     },
     // Ministry Roles
     [MinistryRole.LEADER]: {
@@ -81,8 +108,13 @@ export const ROLE_UI_METADATA = {
         color: 'bg-orange-100 text-orange-800',
         description: 'Encargado principal del ministerio.'
     },
+    [MinistryRole.COORDINATOR]: {
+        label: 'Coordinador',
+        color: 'bg-orange-100 text-orange-800',
+        description: 'Coordinador del ministerio.'
+    },
     [MinistryRole.TEAM_MEMBER]: {
-        label: 'Miembro',
+        label: 'Miembro Equipo',
         color: 'bg-orange-50 text-orange-600',
         description: 'Parte activa del equipo de trabajo.'
     },

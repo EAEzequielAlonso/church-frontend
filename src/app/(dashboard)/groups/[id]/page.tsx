@@ -176,15 +176,15 @@ export default function GroupDetailsPage() {
                             </div>
                         </div>
 
-                        <div 
+                        <div
                             className="bg-gradient-to-br from-violet-500 to-indigo-600 p-6 rounded-xl text-white shadow-lg flex flex-col justify-between transition-all"
                             style={(() => {
                                 const nextEvent = group.events
                                     ?.filter(e => isFuture(new Date(e.startDate)) || isToday(new Date(e.startDate)))
                                     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0];
-                                
+
                                 if (nextEvent?.color) {
-                                    return { 
+                                    return {
                                         backgroundImage: `linear-gradient(to bottom right, ${nextEvent.color}, ${nextEvent.color}dd)`,
                                         border: `1px solid ${nextEvent.color}`
                                     };

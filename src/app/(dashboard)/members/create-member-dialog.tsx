@@ -26,7 +26,7 @@ export function CreateMemberDialog({ open, onOpenChange, onSuccess }: CreateMemb
             documentId: '',
             birthDate: '',
             status: MembershipStatus.MEMBER,
-            ecclesiasticalRole: EcclesiasticalRole.NONE
+            role: EcclesiasticalRole.NONE
         }
     });
 
@@ -35,7 +35,11 @@ export function CreateMemberDialog({ open, onOpenChange, onSuccess }: CreateMemb
     const onSubmit = async (data: any) => {
         setIsLoading(true);
         try {
-            await api.post('/members', data);
+            // Transform single role to field
+            const payload = { ...data, ecclesiasticalRole: data.role };
+            delete payload.role;
+
+            await api.post('/members', payload);
             toast.success('Miembro creado exitosamente');
             reset();
             onSuccess();
@@ -108,9 +112,9 @@ export function CreateMemberDialog({ open, onOpenChange, onSuccess }: CreateMemb
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Rol Eclesiástico</Label>
+                            <Label>Rol Eclesiástico (Principal)</Label>
                             <Controller
-                                name="ecclesiasticalRole"
+                                name="role"
                                 control={control}
                                 render={({ field }) => (
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>

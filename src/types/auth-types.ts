@@ -19,13 +19,17 @@ export enum SubscriptionStatus {
 }
 
 export enum MembershipStatus {
-
-    PROSPECT = 'PROSPECT',
     MEMBER = 'MEMBER',
+    CHILD = 'CHILD',
     DISCIPLINED = 'DISCIPLINED',
     EXCOMMUNICATED = 'EXCOMMUNICATED',
-    INACTIVE = 'INACTIVE',
-    CHILD = 'CHILD'
+    INACTIVE = 'INACTIVE'
+}
+
+export enum FollowUpStatus {
+    VISITOR = 'VISITOR',       // Visitante frecuente
+    PROSPECT = 'PROSPECT',     // Listo para membresía
+    ARCHIVED = 'ARCHIVED',     // Ya no viene más
 }
 
 export enum EcclesiasticalRole {
@@ -33,8 +37,30 @@ export enum EcclesiasticalRole {
     BISHOP = 'BISHOP',
     ELDER = 'ELDER',
     DEACON = 'DEACON',
-    LEADER = 'LEADER',
     NONE = 'NONE'
+}
+
+export enum FunctionalRole {
+    ADMIN_CHURCH = 'ADMIN_CHURCH',
+    TREASURER = 'TREASURER',
+    AUDITOR = 'AUDITOR',
+    COUNSELOR = 'COUNSELOR',
+    MINISTRY_LEADER = 'MINISTRY_LEADER',
+    LIBRARIAN = 'LIBRARIAN',
+    MEMBER = 'MEMBER'
+}
+
+export enum Permission {
+    TREASURY_VIEW = 'TREASURY_VIEW',
+    TREASURY_MANAGE = 'TREASURY_MANAGE',
+    MEMBERS_VIEW = 'MEMBERS_VIEW',
+    MEMBERS_MANAGE = 'MEMBERS_MANAGE',
+    COUNSELING_VIEW_OWN = 'COUNSELING_VIEW_OWN',
+    COUNSELING_MANAGE_ALL = 'COUNSELING_MANAGE_ALL',
+    GROUPS_VIEW = 'GROUPS_VIEW',
+    GROUPS_MANAGE = 'GROUPS_MANAGE',
+    LIBRARY_MANAGE = 'LIBRARY_MANAGE',
+    SETTINGS_MANAGE = 'SETTINGS_MANAGE',
 }
 
 export enum MinistryRole {
@@ -70,7 +96,6 @@ export interface User {
     email: string;
     fullName?: string; // From Person
     personId?: string;
-    isPlatformAdmin: boolean;
     systemRole: SystemRole;
     isOnboarded: boolean;
     roles: string[]; // Aggregated active roles (Ecclesiastical, etc.) for current context
@@ -89,6 +114,7 @@ export interface ChurchMember {
     personId: string;
     churchId: string;
     ecclesiasticalRole: EcclesiasticalRole;
+    functionalRoles: FunctionalRole[];
     status: MembershipStatus;
     joinedAt: string;
 }

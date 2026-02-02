@@ -14,9 +14,10 @@ interface PrayerCardProps {
     onEdit: (req: any) => void;
     onAnswer: (req: any) => void;
     onStatusChange: (id: string, status: string) => void;
+    onToggleHidden: (id: string, isHidden: boolean) => void;
 }
 
-export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange }: PrayerCardProps) {
+export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange, onToggleHidden }: PrayerCardProps) {
     const { user } = useAuth();
 
     // Check if user is author
@@ -35,7 +36,7 @@ export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange }
     };
 
     return (
-        <Card className={`group relative transition-all duration-300 border-l-4 ${request.status === 'ANSWERED' ? 'border-l-emerald-500 bg-emerald-50/10' : 'border-l-indigo-500 hover:shadow-md'}`}>
+        <Card className={`group relative transition-all duration-300 border-l-4 ${request.status === 'ANSWERED' ? 'border-l-emerald-500 bg-emerald-50/10' : 'border-l-indigo-500 hover:shadow-md'} ${request.isHidden ? 'opacity-75 bg-slate-50' : ''}`}>
             <CardHeader className="pb-3 pt-4 px-5 flex flex-row justify-between items-start space-y-0">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -49,8 +50,13 @@ export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange }
                         )}
                         <span className="text-xs text-slate-400">• {format(new Date(request.createdAt), "d MMM", { locale: es })}</span>
                     </div>
-                    <div>
+                    <div className="flex gap-2">
                         {getVisibilityBadge()}
+                        {request.isHidden && (
+                            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 flex gap-1 items-center">
+                                <ShieldAlert className="w-3 h-3" /> Oculta por Moderación
+                            </Badge>
+                        )}
                     </div>
                 </div>
 
@@ -78,12 +84,12 @@ export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange }
                                     <>
                                         <DropdownMenuSeparator />
                                         <div className="px-2 py-1.5 text-xs font-semibold text-slate-400">Moderación</div>
-                                        {request.status === 'HIDDEN' ? (
-                                            <DropdownMenuItem onClick={() => onStatusChange(request.id, 'WAITING')}>
+                                        {request.isHidden ? (
+                                            <DropdownMenuItem onClick={() => onToggleHidden(request.id, false)}>
                                                 <Eye className="w-4 h-4 mr-2" /> Restaurar (Visible)
                                             </DropdownMenuItem>
                                         ) : (
-                                            <DropdownMenuItem onClick={() => onStatusChange(request.id, 'HIDDEN')} className="text-amber-600">
+                                            <DropdownMenuItem onClick={() => onToggleHidden(request.id, true)} className="text-amber-600">
                                                 <EyeOff className="w-4 h-4 mr-2" /> Ocultar
                                             </DropdownMenuItem>
                                         )}
@@ -112,13 +118,6 @@ export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange }
                         <p className="text-sm text-emerald-900/80 italic">
                             "{request.testimony}"
                         </p>
-                    </div>
-                )}
-
-                {request.status === 'HIDDEN' && (
-                    <div className="mt-2 text-xs flex items-center gap-1.5 text-amber-600 font-medium bg-amber-50 p-2 rounded">
-                        <ShieldAlert className="w-3 h-3" />
-                        Esta petición está oculta por moderación.
                     </div>
                 )}
             </CardContent>

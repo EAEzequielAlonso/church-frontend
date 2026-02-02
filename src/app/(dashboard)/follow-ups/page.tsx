@@ -13,6 +13,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function FollowUpsPage() {
@@ -21,11 +31,12 @@ export default function FollowUpsPage() {
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [assigningPerson, setAssigningPerson] = useState<any>(null);
+    const [deletingPerson, setDeletingPerson] = useState<any>(null);
 
     // Default tab based on role? Admin usually "ACTIVE", Member sees what they have.
     // If Admin: "ACTIVE" shows all active.
     // If Member: "ACTIVE" shows their active assignments.
-    const [activeTab, setActiveTab] = useState('ACTIVE');
+    const [activeTab, setActiveTab] = useState('VISITOR');
 
     const { data: people, isLoading, mutate } = useSWR(`/follow-ups?status=${activeTab}`, async (url) => (await api.get(url)).data);
 
@@ -40,6 +51,23 @@ export default function FollowUpsPage() {
             mutate();
         } catch (error) {
             toast.error('Error al cambiar estado');
+        }
+    };
+
+    const handleDelete = (person: any) => {
+        setDeletingPerson(person);
+    };
+
+    const confirmDelete = async () => {
+        if (!deletingPerson) return;
+        try {
+            await api.delete(`/follow-ups/${deletingPerson.id}`);
+            toast.success('Persona eliminada definitivamente');
+            mutate();
+        } catch (error) {
+            toast.error('Error al eliminar');
+        } finally {
+            setDeletingPerson(null);
         }
     };
 
@@ -75,23 +103,21 @@ export default function FollowUpsPage() {
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-3 mb-8 max-w-md mx-auto">
-                        <TabsTrigger value="ACTIVE" className="font-semibold">
+                        <TabsTrigger value="VISITOR" className="font-semibold">
                             <Users className="w-4 h-4 mr-2 text-indigo-500" />
-                            Activos
+                            Visitantes
                         </TabsTrigger>
-                        <TabsTrigger value="FINISHED" className="font-semibold">
-                            <Archive className="w-4 h-4 mr-2 text-emerald-500" />
-                            Finalizados
+                        <TabsTrigger value="PROSPECT" className="font-semibold">
+                            <UserPlus className="w-4 h-4 mr-2 text-emerald-500" />
+                            Prospectos
                         </TabsTrigger>
-                        {canManage && (
-                            <TabsTrigger value="HIDDEN" className="font-semibold">
-                                <EyeOff className="w-4 h-4 mr-2 text-slate-500" />
-                                Ocultos
-                            </TabsTrigger>
-                        )}
+                        <TabsTrigger value="ARCHIVED" className="font-semibold">
+                            <Archive className="w-4 h-4 mr-2 text-slate-500" />
+                            Archivados
+                        </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="ACTIVE" className="space-y-6">
+                    <TabsContent value="VISITOR" className="space-y-6">
                         {isLoading ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
@@ -99,7 +125,7 @@ export default function FollowUpsPage() {
                         ) : people?.length === 0 ? (
                             <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
                                 <Users className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-slate-600">No hay seguimientos activos</h3>
+                                <h3 className="text-lg font-medium text-slate-600">No hay visitantes</h3>
                                 <p className="text-slate-400 mt-1">
                                     {canManage ? 'Registra una nueva persona para comenzar.' : 'No tienes asignaciones pendientes.'}
                                 </p>
@@ -112,23 +138,23 @@ export default function FollowUpsPage() {
                                         person={person}
                                         onAssign={handleAssign}
                                         onStatusChange={handleStatusChange}
+                                        onDelete={handleDelete}
                                     />
                                 ))}
                             </div>
                         )}
                     </TabsContent>
 
-                    <TabsContent value="FINISHED" className="space-y-6">
-                        {/* Similar structure for FINISHED */}
+                    <TabsContent value="PROSPECT" className="space-y-6">
                         {isLoading ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
                             </div>
                         ) : people?.length === 0 ? (
                             <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
-                                <Archive className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-slate-600">Sin historial</h3>
-                                <p className="text-slate-400 mt-1">Aquí verás los seguimientos completados.</p>
+                                <UserPlus className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                <h3 className="text-lg font-medium text-slate-600">Sin prospectos</h3>
+                                <p className="text-slate-400 mt-1">Aquí verás los visitantes listos para membresía.</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -138,37 +164,37 @@ export default function FollowUpsPage() {
                                         person={person}
                                         onAssign={handleAssign}
                                         onStatusChange={handleStatusChange}
+                                        onDelete={handleDelete}
                                     />
                                 ))}
                             </div>
                         )}
                     </TabsContent>
 
-                    {canManage && (
-                        <TabsContent value="HIDDEN" className="space-y-6">
-                            {isLoading ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
-                                </div>
-                            ) : people?.length === 0 ? (
-                                <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
-                                    <EyeOff className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-slate-600">Papelera vacía</h3>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {people?.map((person: any) => (
-                                        <FollowUpCard
-                                            key={person.id}
-                                            person={person}
-                                            onAssign={handleAssign}
-                                            onStatusChange={handleStatusChange}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </TabsContent>
-                    )}
+                    <TabsContent value="ARCHIVED" className="space-y-6">
+                        {isLoading ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
+                            </div>
+                        ) : people?.length === 0 ? (
+                            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
+                                <EyeOff className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                <h3 className="text-lg font-medium text-slate-600">Archivo vacío</h3>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {people?.map((person: any) => (
+                                    <FollowUpCard
+                                        key={person.id}
+                                        person={person}
+                                        onAssign={handleAssign}
+                                        onStatusChange={handleStatusChange}
+                                        onDelete={handleDelete}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </TabsContent>
                 </Tabs>
             </div>
 
@@ -186,6 +212,23 @@ export default function FollowUpsPage() {
                     person={assigningPerson}
                 />
             )}
+
+            <AlertDialog open={!!deletingPerson} onOpenChange={(open) => !open && setDeletingPerson(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminará permanentemente a <strong>{deletingPerson?.firstName} {deletingPerson?.lastName}</strong> y todo su historial de seguimiento.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+                            Sí, eliminar definitivamente
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </PageContainer>
     );
 }

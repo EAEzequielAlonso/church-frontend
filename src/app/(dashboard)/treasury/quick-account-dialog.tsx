@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export function QuickAccountDialog({ onSuccess }: { onSuccess: () => void }) {
+export function QuickAccountDialog({ onSuccess, trigger }: { onSuccess: () => void, trigger?: React.ReactNode }) {
     const { churchId } = useAuth();
     const [open, setOpen] = useState(false);
     const [name, setName] = useState('');
@@ -35,7 +35,7 @@ export function QuickAccountDialog({ onSuccess }: { onSuccess: () => void }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-xs">Configurar Cuentas</Button>
+                {trigger || <Button variant="ghost" size="sm" className="text-xs">Configurar Cuentas</Button>}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>

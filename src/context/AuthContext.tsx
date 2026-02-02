@@ -6,18 +6,20 @@ import axios from 'axios';
 import api from '@/lib/api';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import AuthHandshake from '@/components/auth/AuthHandshake';
+import { SystemRole } from '@/types/auth-types';
 
 interface User {
     id: string;
     email: string;
     fullName: string;
-    roles?: string[];
+    ecclesiasticalRole?: string;
     isOnboarded: boolean;
     avatarUrl?: string;
     personId?: string;
     memberId?: string;
+    roles?: string[]; // Functional roles from backend
     permissions?: string[];
-    isPlatformAdmin?: boolean;
+    systemRole?: SystemRole;
 }
 
 interface AuthContextType {

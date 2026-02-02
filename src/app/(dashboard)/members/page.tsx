@@ -10,11 +10,16 @@ import { CreateMemberDialog } from './create-member-dialog';
 import { MemberActionsMenu } from './member-actions-menu';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ROLE_UI_METADATA } from '@/constants/role-ui';
+import { FunctionalRole, SystemRole } from '@/types/auth-types';
 
 export default function MembersPage() {
-    const { churchId } = useAuth();
+    const { churchId, user } = useAuth();
     const [members, setMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const canManage = user?.systemRole === SystemRole.ADMIN_APP ||
+        user?.roles?.includes(FunctionalRole.ADMIN_CHURCH) ||
+        user?.roles?.includes(FunctionalRole.AUDITOR);
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -60,10 +65,12 @@ export default function MembersPage() {
                         <h1 className="text-3xl font-bold tracking-tight text-gray-900">Miembros</h1>
                         <p className="text-gray-500 mt-1">Gestiona el directorio de tu iglesia</p>
                     </div>
-                    <Button className="bg-primary hover:bg-primary/90" onClick={() => setIsCreateOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Nuevo Miembro
-                    </Button>
+                    {canManage && (
+                        <Button className="bg-primary hover:bg-primary/90" onClick={() => setIsCreateOpen(true)}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Nuevo Miembro
+                        </Button>
+                    )}
                 </div>
 
                 <CreateMemberDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} onSuccess={fetchMembers} />
@@ -91,9 +98,10 @@ export default function MembersPage() {
                                 <tr>
                                     <th className="px-6 py-4">Nombre</th>
                                     <th className="px-6 py-4">Rol Eclesiástico</th>
+                                    <th className="px-6 py-4">Funciones</th>
                                     <th className="px-6 py-4">Estado</th>
                                     <th className="px-6 py-4">Fecha de Unión</th>
-                                    <th className="px-6 py-4 text-right">Acciones</th>
+                                    {canManage && <th className="px-6 py-4 text-right">Acciones</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -131,6 +139,25 @@ export default function MembersPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
+                                            <div className="flex flex-wrap gap-1">
+                                                {(() => {
+                                                    // Filter out MEMBER role for display
+                                                    const displayRoles = (member.functionalRoles || []).filter((r: string) => r !== 'MEMBER');
+
+                                                    if (displayRoles.length > 0) {
+                                                        return displayRoles.map((role: string) => (
+                                                            ROLE_UI_METADATA[role as keyof typeof ROLE_UI_METADATA] && (
+                                                                <span key={role} className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200`}>
+                                                                    {ROLE_UI_METADATA[role as keyof typeof ROLE_UI_METADATA].label}
+                                                                </span>
+                                                            )
+                                                        ));
+                                                    }
+                                                    return <span className="text-gray-400 text-xs">Sin Funciones</span>;
+                                                })()}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
                                             {member.status && ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA] ? (
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA].color}`}>
                                                     {ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA].label}
@@ -144,9 +171,11 @@ export default function MembersPage() {
                                         <td className="px-6 py-4 text-gray-500">
                                             {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : '-'}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <MemberActionsMenu member={member} onRefresh={fetchMembers} />
-                                        </td>
+                                        {canManage && (
+                                            <td className="px-6 py-4 text-right">
+                                                <MemberActionsMenu member={member} onRefresh={fetchMembers} />
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

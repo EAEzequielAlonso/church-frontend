@@ -26,8 +26,11 @@ import { ArrowLeft, Plus, Target, TrendingUp, AlertTriangle } from 'lucide-react
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
+import { useRouter } from 'next/navigation';
+
 export default function BudgetsPage() {
     const { churchId } = useAuth();
+    const router = useRouter();
     const [budgets, setBudgets] = useState<any[]>([]);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [ministries, setMinistries] = useState<any[]>([]);
@@ -86,7 +89,7 @@ export default function BudgetsPage() {
         <div className="space-y-6 max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => window.location.href = '/treasury'} className="rounded-full">
+                    <Button variant="ghost" size="icon" onClick={() => router.push('/treasury')} className="rounded-full">
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
@@ -231,8 +234,8 @@ function NewBudgetDialog({ ministries, categories, year, onSuccess }: any) {
     });
 
     const handleSave = async () => {
-        if (!form.ministryId || !form.categoryId || !form.amountLimit) {
-            toast.error('Completa todos los campos');
+        if ((!form.ministryId && !form.categoryId) || !form.amountLimit) {
+            toast.error('Debes seleccionar al menos un Ministerio o una Categoría, y definir un monto.');
             return;
         }
 
@@ -245,7 +248,13 @@ function NewBudgetDialog({ ministries, categories, year, onSuccess }: any) {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ ...form, year, amountLimit: Number(form.amountLimit) })
+                body: JSON.stringify({
+                    ...form,
+                    ministryId: form.ministryId || null,
+                    categoryId: form.categoryId || null,
+                    year,
+                    amountLimit: Number(form.amountLimit)
+                })
             });
 
             if (res.ok) {
@@ -276,17 +285,18 @@ function NewBudgetDialog({ ministries, categories, year, onSuccess }: any) {
                 <DialogHeader>
                     <DialogTitle className="text-xl font-bold text-slate-800">Definir Presupuesto</DialogTitle>
                     <DialogDescription className="text-xs font-medium text-slate-400">
-                        Asigna un límite de gastos para un ministerio y categoría en {year}.
+                        Asigna un límite de gastos para un ministerio y/o categoría en {year}.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Ministerio</Label>
-                        <Select onValueChange={(val) => setForm({ ...form, ministryId: val })}>
+                        <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Ministerio (Opcional)</Label>
+                        <Select onValueChange={(val) => setForm({ ...form, ministryId: val === 'none' ? '' : val })}>
                             <SelectTrigger className="h-11 bg-slate-50/50 border-slate-100">
                                 <SelectValue placeholder="Seleccionar Ministerio" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="none">Ninguno (General)</SelectItem>
                                 {ministries.map((m: any) => (
                                     <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                                 ))}
@@ -294,12 +304,13 @@ function NewBudgetDialog({ ministries, categories, year, onSuccess }: any) {
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Categoría de Gasto</Label>
-                        <Select onValueChange={(val) => setForm({ ...form, categoryId: val })}>
+                        <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Categoría de Gasto (Opcional)</Label>
+                        <Select onValueChange={(val) => setForm({ ...form, categoryId: val === 'none' ? '' : val })}>
                             <SelectTrigger className="h-11 bg-slate-50/50 border-slate-100">
                                 <SelectValue placeholder="Seleccionar Categoría" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="none">Ninguna (General)</SelectItem>
                                 {categories.map((c: any) => (
                                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                                 ))}

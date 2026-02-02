@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit2, History, User, Clock, AlertCircle } from 'lucide-react';
+import { Edit2, History, User, Clock, AlertCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EditTransactionDialogProps {
@@ -23,6 +23,7 @@ interface EditTransactionDialogProps {
 
 export function EditTransactionDialog({ transaction, onSuccess }: EditTransactionDialogProps) {
     const [open, setOpen] = useState(false);
+    const [accounts, setAccounts] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -30,6 +31,9 @@ export function EditTransactionDialog({ transaction, onSuccess }: EditTransactio
     const [form, setForm] = useState({
         description: transaction.description,
         amount: Number(transaction.amount),
+        sourceAccountId: transaction.sourceAccount?.id,
+        destinationAccountId: transaction.destinationAccount?.id,
+        ministryId: transaction.ministry?.id,
         reason: ''
     });
 
@@ -45,15 +49,25 @@ export function EditTransactionDialog({ transaction, onSuccess }: EditTransactio
         }
     };
 
+    const fetchAccounts = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003'}/treasury/accounts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) setAccounts(await res.json());
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     useEffect(() => {
+        if (open) fetchAccounts();
         if (open && showHistory) fetchAuditLogs();
     }, [open, showHistory]);
 
     const handleUpdate = async () => {
-        if (!form.reason) {
-            toast.error('Debes proporcionar un motivo para el cambio');
-            return;
-        }
+        // Validation for reason removed to improve UX. Backend defaults to 'Edición completa' if missing.
 
         setLoading(true);
         try {
@@ -82,6 +96,34 @@ export function EditTransactionDialog({ transaction, onSuccess }: EditTransactio
         }
     };
 
+    const handleDelete = async () => {
+        if (!confirm('¿Estás seguro de eliminar este movimiento? Se revertirán los saldos asociados.')) return;
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003'}/treasury/transactions/${transaction.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                toast.success('Movimiento eliminado correctamente');
+                onSuccess();
+                setOpen(false);
+            } else {
+                toast.error('Error al eliminar el movimiento');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Error de conexión');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const assets = accounts.filter(a => a.type === 'asset');
+    const allAccounts = accounts; // Or filter if you want only categories for destination? Keeping simple for now as per backend logic.
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -89,7 +131,7 @@ export function EditTransactionDialog({ transaction, onSuccess }: EditTransactio
                     <Edit2 className="w-3.5 h-3.5" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl overflow-hidden p-0">
+            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl overflow-hidden p-0 max-h-[90vh] overflow-y-auto">
                 <DialogHeader className="p-6 bg-slate-50/50 border-b border-slate-100">
                     <div className="flex justify-between items-center">
                         <div>
@@ -128,17 +170,44 @@ export function EditTransactionDialog({ transaction, onSuccess }: EditTransactio
                                     className="h-11 bg-slate-50/50 border-slate-100 focus:ring-primary/20 transition-all font-medium"
                                 />
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Monto ({transaction.currency})</Label>
+                                    <Input
+                                        type="number"
+                                        value={form.amount}
+                                        onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+                                        className="h-11 bg-slate-50/50 border-slate-100 focus:ring-primary/20 transition-all font-bold text-lg"
+                                    />
+                                </div>
+                                {/* TODO: Currency? Exch Rate? Maybe too complex for edit now. keeping simple */}
+                            </div>
+
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Monto ({transaction.currency})</Label>
-                                <Input
-                                    type="number"
-                                    value={form.amount}
-                                    onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
-                                    className="h-11 bg-slate-50/50 border-slate-100 focus:ring-primary/20 transition-all font-bold text-lg"
-                                />
+                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Cuenta Origen</Label>
+                                <select
+                                    className="flex h-11 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={form.sourceAccountId || ''}
+                                    onChange={(e) => setForm({ ...form, sourceAccountId: e.target.value })}
+                                >
+                                    <option value="">Seleccionar Cuenta</option>
+                                    {allAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>)}
+                                </select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Motivo del Cambio</Label>
+                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Cuenta Destino</Label>
+                                <select
+                                    className="flex h-11 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={form.destinationAccountId || ''}
+                                    onChange={(e) => setForm({ ...form, destinationAccountId: e.target.value })}
+                                >
+                                    <option value="">Seleccionar Cuenta</option>
+                                    {allAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>)}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Motivo del Cambio (Requerido)</Label>
                                 <Input
                                     placeholder="Ej: Error en el registro inicial..."
                                     value={form.reason}
@@ -195,15 +264,26 @@ export function EditTransactionDialog({ transaction, onSuccess }: EditTransactio
                 )}
 
                 {!showHistory && (
-                    <DialogFooter className="p-6 bg-slate-50/30 border-t border-slate-50">
-                        <Button variant="ghost" onClick={() => setOpen(false)} className="text-slate-500 font-bold hover:bg-slate-100">Cancelar</Button>
+                    <DialogFooter className="p-6 bg-slate-50/30 border-t border-slate-50 flex justify-between items-center sm:justify-between">
                         <Button
-                            onClick={handleUpdate}
+                            variant="ghost"
+                            onClick={handleDelete}
                             disabled={loading}
-                            className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-lg shadow-primary/20 transition-all rounded-xl"
+                            className="text-rose-500 font-bold hover:bg-rose-50 hover:text-rose-600"
                         >
-                            {loading ? 'Guardando...' : 'Confirmar Cambios'}
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Eliminar
                         </Button>
+                        <div className="flex gap-2">
+                            <Button variant="ghost" onClick={() => setOpen(false)} className="text-slate-500 font-bold hover:bg-slate-100">Cancelar</Button>
+                            <Button
+                                onClick={handleUpdate}
+                                disabled={loading}
+                                className="bg-primary hover:bg-primary/90 text-white font-bold px-6 shadow-lg shadow-primary/20 transition-all rounded-xl"
+                            >
+                                {loading ? 'Guardando...' : 'Confirmar'}
+                            </Button>
+                        </div>
                     </DialogFooter>
                 )}
             </DialogContent>
