@@ -5,7 +5,8 @@ import {
     MinistryRole,
     SmallGroupRole,
     FamilyRole,
-    SystemRole
+    SystemRole,
+    FollowUpStatus
 } from '../types/auth-types';
 
 export const ROLE_UI_METADATA = {
@@ -62,7 +63,7 @@ export const ROLE_UI_METADATA = {
         description: 'Servidor ordenado para asistencia práctica.'
     },
     [EcclesiasticalRole.NONE]: {
-        label: 'Sin Cargo',
+        label: 'Miembro',
         color: 'bg-slate-100 text-slate-500',
         description: 'Miembro sin rol eclesiástico específico.'
     },
@@ -97,17 +98,10 @@ export const ROLE_UI_METADATA = {
         color: 'bg-amber-500 text-white shadow-sm',
         description: 'Gestión de biblioteca.'
     },
-    [FunctionalRole.MEMBER]: {
-        label: 'Miembro',
-        color: 'bg-slate-200 text-slate-700',
-        description: 'Acceso básico de miembro.'
-    },
+    // FunctionalRole.MEMBER duplicates MembershipStatus.MEMBER - removed
+
     // Ministry Roles
-    [MinistryRole.LEADER]: {
-        label: 'Líder',
-        color: 'bg-orange-100 text-orange-800',
-        description: 'Encargado principal del ministerio.'
-    },
+    // MinistryRole.LEADER duplicates FunctionalRole.MINISTRY_LEADER - removed
     [MinistryRole.COORDINATOR]: {
         label: 'Coordinador',
         color: 'bg-orange-100 text-orange-800',
@@ -149,5 +143,22 @@ export const ROLE_UI_METADATA = {
         label: 'Hijo/a',
         color: 'bg-green-50 text-green-600',
         description: 'Hijo o hija en el núcleo familiar.'
+    },
+
+    // FollowUp Statuses
+    [FollowUpStatus.VISITOR]: {
+        label: 'Visitante',
+        color: 'bg-blue-100 text-blue-700',
+        description: 'Visitante frecuente de la iglesia.'
+    },
+    [FollowUpStatus.PROSPECT]: {
+        label: 'Candidato a Miembro',
+        color: 'bg-purple-100 text-purple-700',
+        description: 'Listo para iniciar proceso de membresía.'
+    },
+    [FollowUpStatus.ARCHIVED]: {
+        label: 'Archivado',
+        color: 'bg-gray-100 text-gray-500',
+        description: 'Registro archivado.'
     }
 };

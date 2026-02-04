@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarEventType, CreateCalendarEventDto } from "@/types/agenda";
+import { CalendarEventType, CreateCalendarEventDto, CalendarEvent } from "@/types/agenda";
 import { toast } from 'sonner';
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
 
 interface CreateEventDialogProps {
@@ -15,9 +15,11 @@ interface CreateEventDialogProps {
     defaultType?: CalendarEventType;
     defaultEntityId?: string; // ministryId or smallGroupId
     trigger?: React.ReactNode;
+    eventToEdit?: CalendarEvent;
 }
 
-export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId, trigger }: CreateEventDialogProps) {
+export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId, trigger, eventToEdit }: CreateEventDialogProps) {
+    const isEditing = !!eventToEdit;
     const { user } = useAuth();
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -41,17 +43,38 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
     // Reset when opening or defaults change
     useEffect(() => {
         if (open) {
-            setFormData(prev => ({
-                ...prev,
-                type: defaultType || prev.type || CalendarEventType.PERSONAL,
-                ministryId: defaultType === CalendarEventType.MINISTRY ? defaultEntityId : prev.ministryId,
-                smallGroupId: defaultType === CalendarEventType.SMALL_GROUP ? defaultEntityId : prev.smallGroupId
-            }));
-            if (defaultType === CalendarEventType.SMALL_GROUP) {
-                // Suggest a default color for groups? Green maybe?
+            if (eventToEdit) {
+                setFormData({
+                    title: eventToEdit.title,
+                    description: eventToEdit.description || '',
+                    location: eventToEdit.location || '',
+                    type: eventToEdit.type,
+                    color: eventToEdit.color || '#3b82f6',
+                    isAllDay: eventToEdit.isAllDay,
+                });
+                const start = new Date(eventToEdit.startDate);
+                const end = new Date(eventToEdit.endDate);
+                setDateInput(start.toISOString().split('T')[0]);
+                setTimeInput(start.toTimeString().slice(0, 5));
+
+                // Calculate duration
+                const diffMs = end.getTime() - start.getTime();
+                const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                setDurationInput(`${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}`);
+            } else {
+                setFormData(prev => ({
+                    ...prev,
+                    title: '',
+                    description: '',
+                    location: '',
+                    type: defaultType || prev.type || CalendarEventType.PERSONAL,
+                    ministryId: defaultType === CalendarEventType.MINISTRY ? defaultEntityId : prev.ministryId,
+                    smallGroupId: defaultType === CalendarEventType.SMALL_GROUP ? defaultEntityId : prev.smallGroupId
+                }));
             }
         }
-    }, [open, defaultType, defaultEntityId]);
+    }, [open, defaultType, defaultEntityId, eventToEdit]);
 
     const handleChange = (field: keyof CreateCalendarEventDto, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -76,8 +99,12 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
             const endDateTime = new Date(startDateTime.getTime() + durationMs);
 
             const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agenda`, {
-                method: 'POST',
+            const url = isEditing
+                ? `${process.env.NEXT_PUBLIC_API_URL}/agenda/${eventToEdit.id}`
+                : `${process.env.NEXT_PUBLIC_API_URL}/agenda`;
+
+            const res = await fetch(url, {
+                method: isEditing ? 'PATCH' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -91,10 +118,10 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
 
             if (!res.ok) {
                 const error = await res.json();
-                throw new Error(error.message || 'Error al crear evento');
+                throw new Error(error.message || `Error al ${isEditing ? 'editar' : 'crear'} evento`);
             }
 
-            toast.success('Evento creado exitosamente');
+            toast.success(`Evento ${isEditing ? 'editado' : 'creado'} exitosamente`);
             setOpen(false);
             // Reset minimal
             setFormData(prev => ({
@@ -130,7 +157,7 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Crear Nuevo Evento</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Editar Evento' : 'Crear Nuevo Evento'}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="space-y-2">
@@ -183,7 +210,7 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
                         </div>
                     </div>
 
-                    {formData.type === CalendarEventType.MINISTRY && !defaultEntityId && (
+                    {formData.type === CalendarEventType.MINISTRY && !defaultEntityId && !isEditing && (
                         <div className="space-y-2">
                             <Label>ID del Ministerio</Label>
                             <Input
@@ -195,7 +222,7 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
                         </div>
                     )}
 
-                    {formData.type === CalendarEventType.SMALL_GROUP && !defaultEntityId && (
+                    {formData.type === CalendarEventType.SMALL_GROUP && !defaultEntityId && !isEditing && (
                         <div className="space-y-2">
                             <Label>ID del Grupo Pequeño</Label>
                             <Input

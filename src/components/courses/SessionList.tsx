@@ -14,10 +14,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 import { AttendanceDialog } from './AttendanceDialog';
 
 export default function SessionList({ course, refresh }: any) {
+    const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -80,14 +82,19 @@ export default function SessionList({ course, refresh }: any) {
     const isActivity = course.type === 'ACTIVITY';
     const itemLabel = isActivity ? 'Encuentro' : 'Sesión';
 
+    const isAdminOrAuditor = user?.roles?.includes('ADMIN_CHURCH') || user?.roles?.includes('AUDITOR') || user?.systemRole === 'ADMIN_APP';
+    const canManage = isActivity ? isAdminOrAuditor : true; // For Courses, keep open for now or generic
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center mb-2">
                 <h3 className="font-semibold text-slate-800">Programa / Cronograma</h3>
-                <Button size="sm" onClick={() => setIsDialogOpen(true)} className={isActivity ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700"}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    {isActivity ? 'Agregar Encuentro' : 'Programar Sesión'}
-                </Button>
+                {canManage && (
+                    <Button size="sm" onClick={() => setIsDialogOpen(true)} className={isActivity ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700"}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        {isActivity ? 'Agregar Encuentro' : 'Programar Sesión'}
+                    </Button>
+                )}
             </div>
 
             {sortedSessions.length === 0 ? (
@@ -123,25 +130,29 @@ export default function SessionList({ course, refresh }: any) {
                                             )}
                                         </div>
                                         <div className="ml-auto flex gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="h-8 w-8 p-0 text-amber-600 hover:bg-amber-50"
-                                                onClick={() => handleEditSession(session)}
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="secondary"
-                                                onClick={() => {
-                                                    setSelectedSessionId(session.id);
-                                                    setIsAttendanceOpen(true);
-                                                }}
-                                            >
-                                                <CheckCircle className="w-4 h-4 mr-2" />
-                                                Asistencia
-                                            </Button>
+                                            {canManage && (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 p-0 text-amber-600 hover:bg-amber-50"
+                                                        onClick={() => handleEditSession(session)}
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        onClick={() => {
+                                                            setSelectedSessionId(session.id);
+                                                            setIsAttendanceOpen(true);
+                                                        }}
+                                                    >
+                                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                                        Asistencia
+                                                    </Button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </Card>

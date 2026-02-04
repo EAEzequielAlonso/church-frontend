@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Plus, Users } from 'lucide-react';
+import { Settings, Users } from 'lucide-react';
+import { SmallGroup } from '@/types/small-group';
 
-interface CreateGroupDialogProps {
-    onGroupCreated: () => void;
+interface EditGroupDialogProps {
+    group: SmallGroup;
+    onGroupUpdated: () => void;
+    trigger?: React.ReactNode;
 }
 
-export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
+export function EditGroupDialog({ group, onGroupUpdated, trigger }: EditGroupDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -26,11 +29,27 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
         meetingTime: '',
         address: '',
         currentTopic: '',
-        address: '',
-        currentTopic: '',
         studyMaterial: '',
-        openEnrollment: false
+        openEnrollment: false,
+        status: 'ACTIVE'
     });
+
+    useEffect(() => {
+        if (group && open) {
+            setFormData({
+                name: group.name || '',
+                description: group.description || '',
+                objective: group.objective || '',
+                meetingDay: group.meetingDay || '',
+                meetingTime: group.meetingTime || '',
+                address: group.address || '',
+                currentTopic: group.currentTopic || '',
+                studyMaterial: group.studyMaterial || '',
+                openEnrollment: group.openEnrollment || false,
+                status: group.status || 'ACTIVE'
+            });
+        }
+    }, [group, open]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -47,8 +66,8 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
 
         try {
             const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/small-groups`, {
-                method: 'POST',
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/small-groups/${group.id}`, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -56,25 +75,17 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
                 body: JSON.stringify(formData)
             });
 
-            if (!res.ok) throw new Error('Error al crear el grupo');
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'Error al actualizar el grupo');
+            }
 
-            toast.success('Grupo creado exitosamente');
+            toast.success('Grupo actualizado exitosamente');
             setOpen(false);
-            setFormData({
-                name: '',
-                description: '',
-                objective: '',
-                meetingDay: '',
-                meetingTime: '',
-                address: '',
-                currentTopic: '',
-                studyMaterial: '',
-                openEnrollment: false
-            });
-            onGroupCreated();
-        } catch (error) {
+            onGroupUpdated();
+        } catch (error: any) {
             console.error(error);
-            toast.error('No se pudo crear el grupo');
+            toast.error(error.message || 'No se pudo actualizar el grupo');
         } finally {
             setIsLoading(false);
         }
@@ -83,30 +94,52 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="bg-primary hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nuevo Grupo
-                </Button>
+                {trigger || (
+                    <Button variant="outline" size="sm">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Configurar
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Users className="w-5 h-5 text-primary" />
-                        Crear Nuevo Grupo Pequeño
+                        <Settings className="w-5 h-5 text-primary" />
+                        Editar Grupo Pequeño
                     </DialogTitle>
                     <DialogDescription>
-                        Completa la información básica para dar de alta un nuevo grupo.
+                        Modifica la información del grupo y su estado.
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-6 py-4">
                     <div className="grid gap-4">
+                        {/* Status Section Highlighted */}
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <Label htmlFor="status" className="font-semibold mb-2 block">Estado del Grupo</Label>
+                            <Select
+                                value={formData.status}
+                                onValueChange={(val) => handleSelectChange('status', val)}
+                            >
+                                <SelectTrigger className="bg-white">
+                                    <SelectValue placeholder="Seleccionar estado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ACTIVE">Activo (Visible y editable)</SelectItem>
+                                    <SelectItem value="SUSPENDED">Suspendido (Visible, sin actividad)</SelectItem>
+                                    <SelectItem value="FINISHED">Finalizado (Solo lectura)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-slate-500 mt-2">
+                                * Los grupos finalizados pasan a <strong>Solo Lectura</strong> y no permiten agregar participantes ni eventos.
+                            </p>
+                        </div>
+
                         <div className="grid gap-2">
                             <Label htmlFor="name" className="font-semibold">Nombre del Grupo *</Label>
                             <Input
                                 id="name"
                                 name="name"
-                                placeholder="Ej: Jóvenes Adultos - Norte"
                                 value={formData.name}
                                 onChange={handleChange}
                                 required
@@ -118,7 +151,6 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
                             <Input
                                 id="description"
                                 name="description"
-                                placeholder="Breve descripción del propósito del grupo"
                                 value={formData.description}
                                 onChange={handleChange}
                             />
@@ -162,7 +194,6 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
                             <Input
                                 id="address"
                                 name="address"
-                                placeholder="Ej: Casa de Juan, Av. Siempre Viva 123"
                                 value={formData.address}
                                 onChange={handleChange}
                             />
@@ -173,7 +204,6 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
                             <Textarea
                                 id="objective"
                                 name="objective"
-                                placeholder="¿Cuál es la meta principal de este grupo?"
                                 value={formData.objective}
                                 onChange={handleChange}
                             />
@@ -181,21 +211,19 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="currentTopic">Tema Actual (Opcional)</Label>
+                                <Label htmlFor="currentTopic">Tema Actual</Label>
                                 <Input
                                     id="currentTopic"
                                     name="currentTopic"
-                                    placeholder="Ej: El libro de Romanos"
                                     value={formData.currentTopic}
                                     onChange={handleChange}
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="studyMaterial">Material (Opcional)</Label>
+                                <Label htmlFor="studyMaterial">Material</Label>
                                 <Input
                                     id="studyMaterial"
                                     name="studyMaterial"
-                                    placeholder="Libro, PDF, Video..."
                                     value={formData.studyMaterial}
                                     onChange={handleChange}
                                 />
@@ -224,7 +252,7 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
                             Cancelar
                         </Button>
                         <Button type="submit" disabled={isLoading}>
-                            {isLoading ? 'Creando...' : 'Crear Grupo'}
+                            {isLoading ? 'Guardando...' : 'Guardar Cambios'}
                         </Button>
                     </DialogFooter>
                 </form>

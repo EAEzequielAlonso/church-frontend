@@ -105,14 +105,18 @@ export default function CourseDetailPage() {
                                 <span className="text-sm font-bold text-indigo-600">Cupo Total</span>
                                 <span className="text-2xl font-black text-indigo-900">{(course.participants?.length || 0) + (course.guests?.length || 0)} <span className="text-xs text-slate-400 font-normal">/ {course.capacity || '♾️'}</span></span>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="flex flex-col p-2 bg-white rounded-lg border border-slate-100">
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="flex flex-col p-2 bg-white rounded-lg border border-slate-100 items-center">
                                     <span className="text-[10px] uppercase font-bold text-slate-400">Miembros</span>
                                     <span className="text-xl font-bold text-slate-700">{course.participants?.length || 0}</span>
                                 </div>
-                                <div className="flex flex-col p-2 bg-white rounded-lg border border-slate-100">
+                                <div className="flex flex-col p-2 bg-white rounded-lg border border-slate-100 items-center">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400">Visitantes</span>
+                                    <span className="text-xl font-bold text-slate-700">{course.guests?.filter((g: any) => g.followUpPerson).length || 0}</span>
+                                </div>
+                                <div className="flex flex-col p-2 bg-white rounded-lg border border-slate-100 items-center">
                                     <span className="text-[10px] uppercase font-bold text-slate-400">Invitados</span>
-                                    <span className="text-xl font-bold text-slate-700">{course.guests?.length || 0}</span>
+                                    <span className="text-xl font-bold text-slate-700">{course.guests?.filter((g: any) => !g.followUpPerson).length || 0}</span>
                                 </div>
                             </div>
                             <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">

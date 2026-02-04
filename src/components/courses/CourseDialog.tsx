@@ -68,6 +68,17 @@ export default function CourseDialog({ open, onOpenChange, onSuccess, courseToEd
                 type: courseToEdit ? undefined : (data.type || defaultType) // Send only on create
             };
 
+            // Date Validation
+            if (payload.startDate && payload.endDate) {
+                const start = new Date(payload.startDate);
+                const end = new Date(payload.endDate);
+                if (end < start) {
+                    toast.error('La fecha de fin no puede ser anterior a la de inicio');
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
             // Remove undefined keys to be clean
             if (courseToEdit) delete payload.type;
 
@@ -76,7 +87,7 @@ export default function CourseDialog({ open, onOpenChange, onSuccess, courseToEd
                 toast.success('Curso actualizado');
             } else {
                 await api.post('/courses', payload);
-                toast.success('Curso creado exitosamente');
+                toast.success(defaultType === 'ACTIVITY' ? 'Actividad creada exitosamente' : 'Curso creado exitosamente');
             }
 
             // Critical: Call onSuccess first, then close, then reset
@@ -142,17 +153,13 @@ export default function CourseDialog({ open, onOpenChange, onSuccess, courseToEd
                         <div className="space-y-2">
                             <Label>Color Identificativo</Label>
                             <div className="flex gap-2">
-                                <div
-                                    className={`h-9 w-9 rounded-full bg-[#6366f1] cursor-pointer ring-2 ring-offset-2 ${watch('color') === '#6366f1' ? 'ring-slate-400' : 'ring-transparent'}`}
-                                    onClick={() => setValue('color', '#6366f1')}
-                                />
                                 <Input type="color" {...register('color')} className="w-full h-9 p-1 cursor-pointer" />
                             </div>
                         </div>
 
                         <div className="col-span-2 space-y-2">
                             <Label>Descripción</Label>
-                            <Textarea {...register('description')} placeholder="¿De qué trata este curso?" />
+                            <Textarea {...register('description')} placeholder={defaultType === 'ACTIVITY' ? "¿De qué trata esta actividad?" : "¿De qué trata este curso?"} />
                         </div>
 
                         <div className="space-y-2">

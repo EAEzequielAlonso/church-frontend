@@ -56,9 +56,16 @@ export function Sidebar() {
             ]
         },
         {
-            label: 'Gestión',
+            label: 'Personas',
             items: [
                 { name: 'Miembros', href: '/members', icon: Users },
+                { name: 'Visitantes', href: '/visitors', icon: UserPlus },
+                { name: 'Invitados', href: '/invited', icon: HeartHandshake }, // Using HeartHandshake as placeholder or similar
+            ]
+        },
+        {
+            label: 'Gestión',
+            items: [
                 { name: 'Cultos', href: '/worship', icon: Music },
                 { name: 'Actividades', href: '/activities', icon: Map },
                 { name: 'Grupos Pequeños', href: '/groups', icon: Users },
@@ -72,22 +79,31 @@ export function Sidebar() {
             label: 'Cuidado',
             items: [
                 { name: 'Acompañamiento', href: '/counseling', icon: HeartHandshake, show: hasRole(['ADMIN_CHURCH', 'COUNSELOR', 'PASTOR']) },
-                { name: 'Seguimiento', href: '/follow-ups', icon: UserPlus },
+                { name: 'Seguimiento', href: '/follow-ups', icon: UserPlus }, // Keep legacy or remove? User asked for 'Personas'. "Seguimiento" module might be different from "Visitantes" list. Use 'follow-ups' as logic but 'visitors' as view?
+                // User said "que dividas el sidebar... quiero que miembros lo pongamos en otra categoria de personas junto con visitantes y invitados"
+                // "Seguimiento" (FollowUps) IS basically Visitors management in many systems. 
+                // But user asked for specific "Visitantes" view. 
+                // Let's keep "Seguimiento" in 'Cuidado' if it implies a process, but 'Visitantes' is the list.
+                // Actually, 'FollowUps' module usually maps to visitors. 
+                // Let's assume /visitors is the new page for listing visitors. 
+                // Should I remove 'Seguimiento' from Cuidado? 
+                // "FollowUps" is likely the process/funnel. "Visitantes" is the person list.
+                // Reuse icons.
                 { name: 'Muro de Oración', href: '/prayers', icon: HeartHandshake },
             ]
         },
         {
             label: 'Recursos',
             items: [
-                { name: 'Biblioteca', href: '/library', icon: Book }, // Public for all members to search/request
+                { name: 'Biblioteca', href: '/library', icon: Book },
                 { name: 'Inventario', href: '/inventory', icon: Package },
-                { name: 'Tesorería', href: '/treasury', icon: Wallet, show: hasRole(['TREASURER', 'ADMIN_CHURCH', 'AUDITOR', 'ADMIN_APP']) }, // Functional Roles
+                { name: 'Tesorería', href: '/treasury', icon: Wallet, show: hasRole(['TREASURER', 'ADMIN_CHURCH', 'AUDITOR', 'ADMIN_APP']) },
             ].filter(item => item.show ?? true)
         },
         {
             label: 'Sistema',
             items: [
-                { name: 'Suscripción', href: '/subscription', icon: Wallet, show: hasRole(['ADMIN_CHURCH', 'ADMIN_APP']) }, // Only Admin Church
+                { name: 'Suscripción', href: '/subscription', icon: Wallet, show: hasRole(['ADMIN_CHURCH', 'ADMIN_APP']) },
                 { name: 'Configuración', href: '/settings', icon: Settings, show: hasRole(['ADMIN_CHURCH', 'ADMIN_APP']) },
             ].filter(item => item.show ?? true)
         }

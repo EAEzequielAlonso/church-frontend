@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, UserPlus, Loader2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, UserPlus, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AddMemberDialogProps {
@@ -16,17 +18,26 @@ interface AddMemberDialogProps {
 }
 
 export function AddMemberDialog({ open, onOpenChange, groupId, existingMemberIds, onMemberAdded }: AddMemberDialogProps) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [members, setMembers] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isAdding, setIsAdding] = useState(false);
+    const [activeTab, setActiveTab] = useState('members');
+    const [members, setMembers] = useState<any[]>([]); // Added missing state
+    const [visitors, setVisitors] = useState<any[]>([]);
+    const [searchTerm, setSearchTerm] = useState(''); // Added missing state
+    const [isLoading, setIsLoading] = useState(false); // Added missing state
+    const [isAdding, setIsAdding] = useState(false); // Added missing state
+
+    // Invited Form
+    const [invitedName, setInvitedName] = useState('');
+    const [invitedEmail, setInvitedEmail] = useState('');
 
     useEffect(() => {
         if (open) {
             fetchMembers();
+            if (activeTab === 'visitors') fetchVisitors();
             setSearchTerm('');
+            setInvitedName('');
+            setInvitedEmail('');
         }
-    }, [open]);
+    }, [open, activeTab]);
 
     const fetchMembers = async () => {
         setIsLoading(true);
@@ -37,7 +48,6 @@ export function AddMemberDialog({ open, onOpenChange, groupId, existingMemberIds
             });
             if (res.ok) {
                 const data = await res.json();
-                console.log('Fetched members for dialog:', data);
                 setMembers(data);
             }
         } catch (error) {
@@ -48,12 +58,27 @@ export function AddMemberDialog({ open, onOpenChange, groupId, existingMemberIds
         }
     };
 
-    const addMember = async (memberId: string) => {
-        if (!memberId) {
-            toast.error('Error: Identificador de miembro inválido');
-            return;
+    const fetchVisitors = async () => {
+        setIsLoading(true);
+        try {
+            const token = localStorage.getItem('accessToken');
+            // Assuming GET /follow-ups returns visitors or we filter by status if needed
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/follow-ups?status=VISITOR`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setVisitors(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch visitors', error);
+        } finally {
+            setIsLoading(false);
         }
+    };
 
+    const addMember = async (memberId: string) => {
+        if (!memberId) return;
         setIsAdding(true);
         try {
             const token = localStorage.getItem('accessToken');
@@ -67,102 +92,178 @@ export function AddMemberDialog({ open, onOpenChange, groupId, existingMemberIds
             });
 
             if (!res.ok) throw new Error('Error al agregar miembro');
-
-            toast.success('Miembro agregado al grupo');
+            toast.success('Miembro agregado');
             onMemberAdded();
         } catch (error) {
-            console.error(error);
             toast.error('No se pudo agregar al miembro');
         } finally {
             setIsAdding(false);
         }
     };
 
+    const addVisitor = async (visitorId: string, fullName: string) => {
+        if (!visitorId) return;
+        setIsAdding(true);
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/small-groups/${groupId}/guests`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    followUpPersonId: visitorId,
+                    fullName: fullName
+                })
+            });
+
+            if (!res.ok) throw new Error('Error al agregar visitante');
+            toast.success('Visitante agregado');
+            onMemberAdded();
+        } catch (error) {
+            toast.error('No se pudo agregar al visitante');
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
+    const addInvited = async () => {
+        if (!invitedName.trim()) {
+            toast.error('El nombre es requerido');
+            return;
+        }
+        setIsAdding(true);
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/small-groups/${groupId}/guests`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    fullName: invitedName,
+                    email: invitedEmail
+                })
+            });
+
+            if (!res.ok) throw new Error('Error al agregar invitado');
+            toast.success('Invitado agregado');
+            onMemberAdded();
+            setInvitedName('');
+            setInvitedEmail('');
+        } catch (error) {
+            toast.error('No se pudo agregar al invitado');
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
     const filteredMembers = members.filter(m => {
-        // 1. Must not be in the group already
-        // existingMemberIds are now ChurchMember IDs passed from parent
         if (existingMemberIds.includes(m.id)) return false;
-
-        // 2. Search Filter
         if (!searchTerm) return true;
-
         const searchLower = searchTerm.toLowerCase();
-
         const firstName = m.person?.firstName?.toLowerCase() || '';
         const lastName = m.person?.lastName?.toLowerCase() || '';
-        const fullName = m.person?.fullName?.toLowerCase() || '';
-        const email = m.person?.email?.toLowerCase() || '';
-        const role = m.ecclesiasticalRole?.toLowerCase() || '';
+        return firstName.includes(searchLower) || lastName.includes(searchLower);
+    });
 
-        return firstName.includes(searchLower) ||
-            lastName.includes(searchLower) ||
-            fullName.includes(searchLower) ||
-            email.includes(searchLower) ||
-            email.includes(searchLower) ||
-            role.includes(searchLower);
+    const filteredVisitors = visitors.filter(v => {
+        // TODO: Filter if already in group (need existing guest IDs passed or assume check on backend/frontend parent)
+        // For simple UI, we assume list all for now or would need passed existingGuestIds
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        const firstName = v.firstName?.toLowerCase() || '';
+        const lastName = v.lastName?.toLowerCase() || '';
+        return firstName.includes(searchLower) || lastName.includes(searchLower);
     });
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Agregar Miembros al Grupo</DialogTitle>
+                    <DialogTitle>Agregar Participantes</DialogTitle>
                     <DialogDescription>
-                        Busca y selecciona miembros de la iglesia para unirlos a este grupo pequeño. No es necesario que tengan usuario de sistema.
+                        Selecciona el tipo de participante que deseas agregar al grupo.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-4 space-y-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input
-                            placeholder="Buscar por nombre, apellido o rol..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9"
-                        />
-                    </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="members">Miembros</TabsTrigger>
+                        <TabsTrigger value="visitors">Visitantes</TabsTrigger>
+                        <TabsTrigger value="invited">Invitados</TabsTrigger>
+                    </TabsList>
 
-                    <div className="h-[300px] rounded-md border border-slate-100 p-2 overflow-y-auto">
-                        {isLoading ? (
-                            <div className="flex justify-center py-8">
-                                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                            </div>
-                        ) : filteredMembers.length === 0 ? (
-                            <div className="text-center py-8 text-slate-400 text-sm">
-                                {searchTerm ? 'No se encontraron resultados' : 'Todos los miembros disponibles ya están en el grupo'}
-                            </div>
-                        ) : (
-                            <div className="space-y-1">
-                                {filteredMembers.map(member => (
-                                    <div key={member.id} className="flex items-center justify-between p-2 rounded hover:bg-slate-50 group">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
-                                                {(member.person?.firstName || member.person?.fullName || '?').substring(0, 1)}
-                                                {(member.person?.lastName || '').substring(0, 1)}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-slate-900">
-                                                    {member.person?.firstName} {member.person?.lastName}
-                                                </p>
-                                                <p className="text-xs text-slate-500">{member.ecclesiasticalRole || 'Miembro'}</p>
-                                            </div>
+                    {/* MEMBER TAB */}
+                    <TabsContent value="members" className="space-y-4 py-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Input
+                                placeholder="Buscar miembro..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                        <div className="h-[250px] rounded-md border border-slate-100 p-2 overflow-y-auto">
+                            {isLoading ? <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div> :
+                                filteredMembers.length === 0 ? <p className="text-center text-slate-400 p-4">No se encontraron miembros.</p> :
+                                    filteredMembers.map(member => (
+                                        <div key={member.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded group">
+                                            <div className="text-sm font-medium">{member.person?.firstName} {member.person?.lastName}</div>
+                                            <Button size="sm" variant="ghost" onClick={() => addMember(member.id)} disabled={isAdding} className="opacity-0 group-hover:opacity-100">
+                                                <UserPlus className="w-4 h-4" />
+                                            </Button>
                                         </div>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => addMember(member.id)}
-                                            disabled={isAdding}
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <UserPlus className="w-4 h-4 text-primary" />
-                                        </Button>
-                                    </div>
-                                ))}
+                                    ))}
+                        </div>
+                    </TabsContent>
+
+                    {/* VISITOR TAB */}
+                    <TabsContent value="visitors" className="space-y-4 py-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Input
+                                placeholder="Buscar visitante..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                        <div className="h-[250px] rounded-md border border-slate-100 p-2 overflow-y-auto">
+                            {isLoading ? <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div> :
+                                filteredVisitors.length === 0 ? <p className="text-center text-slate-400 p-4">No se encontraron visitantes.</p> :
+                                    filteredVisitors.map(visitor => (
+                                        <div key={visitor.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded group">
+                                            <div className="text-sm font-medium">{visitor.firstName} {visitor.lastName}</div>
+                                            <Button size="sm" variant="ghost" onClick={() => addVisitor(visitor.id, `${visitor.firstName} ${visitor.lastName}`)} disabled={isAdding} className="opacity-0 group-hover:opacity-100">
+                                                <UserPlus className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                        </div>
+                    </TabsContent>
+
+                    {/* INVITED TAB */}
+                    <TabsContent value="invited" className="space-y-4 py-4">
+                        <div className="space-y-3">
+                            <div>
+                                <Label>Nombre Completo</Label>
+                                <Input value={invitedName} onChange={e => setInvitedName(e.target.value)} placeholder="Ej: Juan Perez" />
                             </div>
-                        )}
-                    </div>
-                </div>
+                            <div>
+                                <Label>Email (Opcional)</Label>
+                                <Input value={invitedEmail} onChange={e => setInvitedEmail(e.target.value)} placeholder="juan@example.com" />
+                            </div>
+                            <Button className="w-full mt-2" onClick={addInvited} disabled={isAdding || !invitedName}>
+                                {isAdding ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                                Agregar Invitado
+                            </Button>
+                        </div>
+                    </TabsContent>
+                </Tabs>
 
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>

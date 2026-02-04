@@ -6,25 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { SmallGroupMember } from '@/types/small-group';
+import { SmallGroupMember, SmallGroupGuest } from '@/types/small-group';
 import { CalendarEvent } from '@/types/agenda';
+import { Badge } from '@/components/ui/badge';
+import { Mail, Phone } from 'lucide-react';
 
 interface TakeAttendanceDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     event: CalendarEvent;
     members: SmallGroupMember[];
+    guests: SmallGroupGuest[];
     onSuccess: () => void;
 }
 
-export function TakeAttendanceDialog({ open, onOpenChange, event, members, onSuccess }: TakeAttendanceDialogProps) {
-    // Initial state: Pre-select if they are already in event.attendees? 
-    // Wait, event.attendees might not be fully populated in the list view if NOT fetched deep enough?
-    // Assuming event has no attendees property in the type definition yet, need to check.
-    // For now, let's assume we start empty or we need to fetch the event details again? 
-    // Or we rely on what was passed.
-
-    // For simplicity: We will just submit the selected IDs.
+export function TakeAttendanceDialog({ open, onOpenChange, event, members, guests, onSuccess }: TakeAttendanceDialogProps) {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -72,7 +68,7 @@ export function TakeAttendanceDialog({ open, onOpenChange, event, members, onSuc
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[450px]">
                 <DialogHeader>
                     <DialogTitle>Tomar Asistencia</DialogTitle>
                     <p className="text-sm text-slate-500">
@@ -80,24 +76,90 @@ export function TakeAttendanceDialog({ open, onOpenChange, event, members, onSuc
                     </p>
                 </DialogHeader>
 
-                <div className="py-4 space-y-3 max-h-[300px] overflow-y-auto">
-                    {members.map(member => (
-                        <div key={member.id} className="flex items-center space-x-3 p-2 hover:bg-slate-50 rounded">
-                            <Checkbox
-                                id={member.id}
-                                checked={member.member.person ? selectedIds.includes(member.member.person.id || '') : false}
-                                onCheckedChange={() => member.member.person && toggleMember(member.member.person.id!)}
-                            />
-                            <Label htmlFor={member.id} className="cursor-pointer flex-grow font-normal">
-                                {member.member.person?.firstName} {member.member.person?.lastName}
-                            </Label>
+                <div className="py-4 space-y-6 max-h-[400px] overflow-y-auto pr-2">
+                    {/* Miembros de la Iglesia */}
+                    {members.length > 0 && (
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2">Miembros</h4>
+                            <div className="space-y-1">
+                                {members.map(member => (
+                                    <div key={member.id} className="flex items-center space-x-3 p-2 hover:bg-slate-50 rounded-lg transition-colors group">
+                                        <Checkbox
+                                            id={`member-${member.id}`}
+                                            checked={member.member.person ? selectedIds.includes(member.member.person.id || '') : false}
+                                            onCheckedChange={() => member.member.person && toggleMember(member.member.person.id!)}
+                                        />
+                                        <div className="flex-grow min-w-0">
+                                            <Label htmlFor={`member-${member.id}`} className="cursor-pointer font-medium text-slate-900 block truncate">
+                                                {member.member.person?.firstName} {member.member.person?.lastName}
+                                            </Label>
+                                            <div className="flex gap-2 text-[10px] text-slate-400">
+                                                <span>Miembro</span>
+                                                {member.role === 'MODERATOR' && <span className="text-violet-500 font-bold">Encargado</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    ))}
+                    )}
+
+                    {/* Visitantes e Invitados */}
+                    {guests.length > 0 && (
+                        <div className="space-y-2 border-t pt-4">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2">Visitantes e Invitados</h4>
+                            <div className="space-y-1">
+                                {guests.map(guest => {
+                                    // The ID we send to the backend for marking attendance
+                                    // We can send the Guest Entity ID directly now, as the backend resolves it
+                                    const sendId = guest.id;
+
+                                    // To check if they already have attendance recorded, we look for matches
+                                    // in the attendees list (which contains Person IDs).
+                                    const isChecked = event.attendees?.some(att =>
+                                        att.id === guest.followUpPerson?.personInvited?.person?.id ||
+                                        att.id === guest.personInvited?.person?.id
+                                    );
+
+                                    // We also check selectedIds for the state of the checkboxes during the session
+                                    const isCurrentlySelected = selectedIds.includes(sendId) ||
+                                        (guest.followUpPerson?.personInvited?.person?.id && selectedIds.includes(guest.followUpPerson.personInvited.person.id)) ||
+                                        (guest.personInvited?.person?.id && selectedIds.includes(guest.personInvited.person.id));
+
+                                    return (
+                                        <div key={guest.id} className="flex items-center space-x-3 p-2 hover:bg-slate-50 rounded-lg transition-colors group">
+                                            <Checkbox
+                                                id={`guest-${guest.id}`}
+                                                checked={isCurrentlySelected}
+                                                onCheckedChange={() => toggleMember(sendId)}
+                                            />
+                                            <div className="flex-grow min-w-0">
+                                                <Label htmlFor={`guest-${guest.id}`} className="cursor-pointer font-medium text-slate-900 block truncate">
+                                                    {guest.fullName}
+                                                </Label>
+                                                <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+                                                    <Badge variant="secondary" className={`text-[9px] h-4 px-1 ${guest.followUpPerson ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                                        {guest.followUpPerson ? 'VISITANTE' : 'INVITADO'}
+                                                    </Badge>
+                                                    {(guest.email || guest.phone) && (
+                                                        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                                            {guest.email && <span className="flex items-center gap-1"><Mail className="w-2.5 h-2.5" /> {guest.email}</span>}
+                                                            {guest.phone && <span className="flex items-center gap-1"><Phone className="w-2.5 h-2.5" /> {guest.phone}</span>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                    <Button onClick={handleSave} disabled={isLoading}>
+                    <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full">Cancelar</Button>
+                    <Button onClick={handleSave} disabled={isLoading} className="rounded-full bg-indigo-600 hover:bg-indigo-700">
                         {isLoading ? 'Guardando...' : 'Guardar Asistencia'}
                     </Button>
                 </DialogFooter>

@@ -5,125 +5,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Search, User, Mail, Phone, Trash2, UserCheck, Plus, Users, Edit2, Settings } from 'lucide-react';
+import { UserPlus, Search, User, Mail, Phone, Trash2, UserCheck, Plus, Users, Edit2, Settings, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
-// Simple Member Search implementation inline for speed/independence
-function SimpleMemberSearch({ onSelect, excludeIds = [] }: any) {
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState<any[]>([]);
-    const [searching, setSearching] = useState(false);
-
-    const handleSearch = async (e?: any) => {
-        if (e) e.preventDefault();
-        setSearching(true);
-        try {
-            const { data } = await api.get(`/members/search?q=${query || ''}`);
-            const filtered = Array.isArray(data) ? data.filter((m: any) => !excludeIds.includes(m.id)) : [];
-            setResults(filtered);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setSearching(false);
-        }
-    }
-
-    // Initial load and filtering
-    useEffect(() => {
-        const loadInitial = async () => {
-            try {
-                const { data } = await api.get('/members?limit=100');
-                const filtered = Array.isArray(data) ? data.filter((m: any) => !excludeIds.includes(m.id)) : [];
-                setResults(filtered.slice(0, 15));
-            } catch (e) { console.error(e); }
-        };
-        loadInitial();
-    }, [excludeIds.length, query === '']);
-
-    // Search effect when query changes
-    useEffect(() => {
-        if (!query) {
-            // Re-fetch via loadInitial dependency
-        } else {
-            const delayDebounceFn = setTimeout(() => {
-                handleSearch();
-            }, 300);
-            return () => clearTimeout(delayDebounceFn);
-        }
-    }, [query]);
-
-    return (
-        <div className="space-y-4">
-            <form onSubmit={handleSearch} className="flex gap-2">
-                <Input
-                    placeholder="Buscar por nombre..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className="flex-1"
-                />
-                <Button type="submit" variant="secondary" disabled={searching}>
-                    <Search className="w-4 h-4" />
-                </Button>
-            </form>
-            <div className="max-h-[350px] overflow-y-auto space-y-2 border rounded-md p-2 bg-slate-50/50">
-                {results.map((member) => (
-                    <div
-                        key={member.id}
-                        className="flex justify-between items-center p-2 hover:bg-white hover:shadow-sm rounded-md cursor-pointer border border-transparent hover:border-slate-200 transition-all"
-                        onClick={() => onSelect(member)}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Avatar className="w-8 h-8">
-                                <AvatarImage src={member.person?.profileImage} />
-                                <AvatarFallback className="bg-slate-200 text-slate-500 font-bold">{member.person?.firstName?.[0]}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <p className="text-sm font-bold text-slate-700">{member.person?.fullName}</p>
-                                <p className="text-[10px] text-slate-400 font-semibold uppercase">{member.status}</p>
-                            </div>
-                        </div>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-                            <Plus className="w-4 h-4" />
-                        </Button>
-                    </div>
-                ))}
-                {results.length === 0 && !searching && (
-                    <div className="text-center py-6 text-slate-400">
-                        <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                        <p className="text-xs">No hay miembros disponibles</p>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
+import { useAuth } from '@/context/AuthContext';
+import AddPeopleDialog from './AddPeopleDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function ParticipantList({ course, refresh }: any) {
-    const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false);
+    const { user } = useAuth();
+    const [isAddPeopleOpen, setIsAddPeopleOpen] = useState(false);
+    // Separate dialog for editing existing guests
     const [isGuestDialogOpen, setIsGuestDialogOpen] = useState(false);
+
+    const isAdminOrAuditor = user?.roles?.includes('ADMIN_CHURCH') || user?.roles?.includes('AUDITOR') || user?.systemRole === 'ADMIN_APP';
     const { register, handleSubmit, reset } = useForm();
     const [isLoading, setIsLoading] = useState(false);
     const [enrollError, setEnrollError] = useState<string | null>(null);
 
-    const onAddMember = async (member: any) => {
-        setEnrollError(null);
-        try {
-            await api.post(`/courses/${course.id}/participants`, { memberId: member.id });
-            toast.success(`${member.person.firstName} inscrito`);
-            refresh();
-            // User requested to keep modal open for multiple adds
-        } catch (error: any) {
-            const data = error.response?.data;
-            const msg = data?.message || 'Error al inscribir';
-            const finalMsg = Array.isArray(msg) ? msg[0] : msg;
-
-            setEnrollError(finalMsg);
-        }
+    const onAddPeopleSuccess = () => {
+        refresh();
+        // Keep open? User might want to add more.
+        // For now let's keep it open unless they close it.
     };
 
     const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean, id: string | null, type: 'MEMBER' | 'GUEST' | null }>({
@@ -210,12 +117,7 @@ export default function ParticipantList({ course, refresh }: any) {
         setIsGuestDialogOpen(true);
     };
 
-    const onGenerateInvite = () => {
-        const startDate = new Date(course.startDate + 'T12:00:00');
-        const text = `¡Hola! Te invito ${course.type === 'ACTIVITY' ? 'a la actividad' : 'al curso'} "${course.title}". Inicia el ${startDate.toLocaleDateString()}. ¿Te gustaría participar?`;
-        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-    }
+
 
     const [stats, setStats] = useState<any>(null);
 
@@ -225,128 +127,169 @@ export default function ParticipantList({ course, refresh }: any) {
 
     const isActivity = course.type === 'ACTIVITY';
 
+    // Derived lists
+    const members = course.participants || [];
+    const visitors = (course.guests || []).filter((g: any) => g.followUpPerson); // Linked
+    const guests = (course.guests || []).filter((g: any) => !g.followUpPerson); // Unlinked (New Guests)
+
     return (
         <div className="space-y-6">
-            <div className={`bg-gradient-to-r p-4 rounded-xl border flex justify-between items-center ${isActivity ? 'from-emerald-50 to-teal-50 border-emerald-100' : 'from-indigo-50 to-blue-50 border-indigo-100'}`}>
+            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <div>
-                    <h4 className={`font-bold ${isActivity ? 'text-emerald-900' : 'text-indigo-900'}`}>Invitar Participantes</h4>
-                    <p className={`text-xs ${isActivity ? 'text-emerald-600' : 'text-indigo-600'}`}>Comparte {isActivity ? 'esta actividad' : 'este curso'} con miembros o amigos.</p>
+                    <h3 className="text-lg font-bold text-slate-800">Personas</h3>
+                    <p className="text-sm text-slate-500">Administra la asistencia y participación</p>
                 </div>
-                <div className="flex gap-2">
-                    {stats && (
-                        <div className={`bg-white px-3 py-1 rounded border text-xs font-bold flex flex-col items-center justify-center ${isActivity ? 'border-emerald-100 text-emerald-800' : 'border-indigo-100 text-indigo-800'}`}>
-                            <span>Asistencia Prom.</span>
-                            <span className="text-lg">{stats.averageAttendance}</span>
-                        </div>
-                    )}
-                    <Button size="sm" onClick={onGenerateInvite} className={`bg-white border hover:bg-white shadow-sm h-auto ${isActivity ? 'text-emerald-600 border-emerald-200' : 'text-indigo-600 border-indigo-200'}`}>
-                        Copiar Invitación
+                {isAdminOrAuditor && (
+                    <Button onClick={() => setIsAddPeopleOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-all hover:scale-105 active:scale-95">
+                        <UserPlus className="w-5 h-5 mr-2" /> Agregar Persona
                     </Button>
-                </div>
+                )}
             </div>
 
             <Tabs defaultValue="members" className="w-full">
-                <TabsList className="mb-4">
-                    <TabsTrigger value="members" className="flex items-center gap-2"><UserCheck className="w-4 h-4" /> Miembros ({course.participants?.length || 0})</TabsTrigger>
-                    <TabsTrigger value="guests" className="flex items-center gap-2"><User className="w-4 h-4" /> Invitados ({course.guests?.length || 0})</TabsTrigger>
+                <TabsList className="mb-6 grid grid-cols-3 h-12 bg-slate-100 p-1 rounded-xl">
+                    <TabsTrigger value="members" className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm rounded-lg py-2 transition-all">
+                        <UserCheck className="w-4 h-4 mr-2" />
+                        Miembros <span className="ml-2 bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-xs font-bold">{members.length}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="visitors" className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm rounded-lg py-2 transition-all">
+                        <User className="w-4 h-4 mr-2" />
+                        Visitantes <span className="ml-2 bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-xs font-bold">{visitors.length}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="guests" className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm rounded-lg py-2 transition-all">
+                        <Users className="w-4 h-4 mr-2" />
+                        Invitados <span className="ml-2 bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-xs font-bold">{guests.length}</span>
+                    </TabsTrigger>
                 </TabsList>
 
+                {/* --- MEMBERS TAB --- */}
                 <TabsContent value="members" className="space-y-4">
-                    <Button onClick={() => setIsMemberDialogOpen(true)} className="w-full border-dashed border-2 border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 mb-4 h-12">
-                        <Plus className="w-5 h-5 mr-2" /> {isActivity ? 'Inscribir Miembro' : 'Inscribir Miembro'}
-                    </Button>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {course.participants?.map((p: any) => (
-                            <div key={p.id} className="flex items-center p-3 bg-white border border-slate-100 rounded-lg shadow-sm group relative">
-                                <Avatar className="h-10 w-10 border-2 border-white shadow-sm mr-3">
-                                    <AvatarImage src={p.member.person?.profileImage} />
-                                    <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold">{p.member.person?.firstName?.[0]}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-bold text-slate-800 text-sm">{p.member.person?.fullName}</p>
-                                    <p className="text-xs text-slate-500">{p.role}</p>
+                    {members.length === 0 ? (
+                        <div className="text-center py-10 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                            <UserCheck className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                            <p>No hay miembros inscritos.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {members.map((p: any) => (
+                                <div key={p.id} className="flex items-center p-3 bg-white border border-slate-100 rounded-lg shadow-sm group hover:border-indigo-200 hover:shadow-md transition-all">
+                                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm mr-3">
+                                        <AvatarImage src={p.member.person?.profileImage} />
+                                        <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold">{p.member.person?.firstName?.[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-bold text-slate-800 text-sm">{p.member.person?.fullName}</p>
+                                    </div>
+                                    <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {isAdminOrAuditor && (
+                                            <Button variant="ghost" size="sm" className="text-red-500 hover:bg-red-50 p-2 h-auto rounded-full" onClick={() => handleDeleteParticipant(p.id)}>
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-red-500 hover:bg-red-50 p-2 h-auto"
-                                        onClick={() => handleDeleteParticipant(p.id)}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </TabsContent>
 
-                <TabsContent value="guests" className="space-y-4">
-                    <Button onClick={() => setIsGuestDialogOpen(true)} className="w-full border-dashed border-2 border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 mb-4 h-12">
-                        <Plus className="w-5 h-5 mr-2" /> Registrar Nuevo Invitado
-                    </Button>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {course.guests?.map((g: any) => (
-                            <div key={g.id} className="p-3 bg-white border border-orange-100 rounded-lg shadow-sm relative group">
-                                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                        onClick={() => handleEditGuest(g)}
-                                    >
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        onClick={() => handleDeleteGuest(g.id)}
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">
-                                        {g.fullName?.[0]}
+                {/* --- VISITORS TAB (Linked Guests) --- */}
+                <TabsContent value="visitors" className="space-y-4">
+                    {visitors.length === 0 ? (
+                        <div className="text-center py-10 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                            <User className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                            <p>No hay visitantes registrados en esta actividad.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {visitors.map((g: any) => (
+                                <div key={g.id} className="p-3 bg-white border border-indigo-100 rounded-lg shadow-sm relative group hover:border-indigo-300 hover:shadow-md transition-all">
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                        {isAdminOrAuditor && (
+                                            <>
+                                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleEditGuest(g)}>
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteGuest(g.id)}>
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </>
+                                        )}
                                     </div>
-                                    <div className="overflow-hidden">
-                                        <p className="font-bold text-slate-800 text-sm truncate">{g.fullName}</p>
-                                        <div className="flex flex-col gap-0.5 mt-1">
-                                            {g.phone && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {g.phone}</span>}
-                                            {g.email && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {g.email}</span>}
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold relative bg-indigo-100 text-indigo-600">
+                                            {g.fullName?.[0]}
+
+                                        </div>
+                                        <div className="overflow-hidden flex-1">
+                                            <p className="font-bold text-slate-800 text-sm truncate">{g.fullName}</p>
+                                            <div className="flex flex-col gap-0.5 mt-1">
+
+                                                {g.phone && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {g.phone}</span>}
+                                                {g.email && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {g.email}</span>}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
+                </TabsContent>
+
+                {/* --- GUESTS TAB (Unlinked) --- */}
+                <TabsContent value="guests" className="space-y-4">
+                    {guests.length === 0 ? (
+                        <div className="text-center py-10 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                            <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                            <p>No hay invitados nuevos (sin registro anterior).</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {guests.map((g: any) => (
+                                <div key={g.id} className="p-3 bg-white border border-orange-100 rounded-lg shadow-sm relative group hover:border-orange-300 hover:shadow-md transition-all">
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                        {isAdminOrAuditor && (
+                                            <>
+                                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50" onClick={() => handleEditGuest(g)}>
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteGuest(g.id)}>
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold bg-orange-100 text-orange-600">
+                                            {g.fullName?.[0]}
+                                        </div>
+                                        <div className="overflow-hidden flex-1">
+                                            <p className="font-bold text-slate-800 text-sm truncate">{g.fullName}</p>
+                                            <div className="flex flex-col gap-0.5 mt-1">
+                                                {g.phone && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {g.phone}</span>}
+                                                {g.email && <span className="text-[10px] text-slate-500 flex items-center gap-1"><Mail className="w-3 h-3" /> {g.email}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </TabsContent>
             </Tabs>
 
-            {/* MEMBER DIALOG */}
-            <Dialog open={isMemberDialogOpen} onOpenChange={(open) => {
-                setIsMemberDialogOpen(open);
-                setEnrollError(null);
-            }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Inscribir Miembro</DialogTitle>
-                        <DialogDescription>Busca y selecciona un miembro activo.</DialogDescription>
-                    </DialogHeader>
-                    {enrollError && (
-                        <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-md text-sm font-bold animate-pulse mb-4">
-                            ⚠️ {enrollError}
-                        </div>
-                    )}
-                    <SimpleMemberSearch
-                        onSelect={onAddMember}
-                        excludeIds={(course.participants || []).map((p: any) => p.member.id)}
-                    />
-                </DialogContent>
-            </Dialog>
+            {/* NEW UNIFIED DIALOG */}
+            <AddPeopleDialog
+                open={isAddPeopleOpen}
+                onOpenChange={setIsAddPeopleOpen}
+                courseId={course.id}
+                existingMemberIds={(course.participants || []).map((p: any) => p.member.id)}
+                existingVisitorIds={(course.guests || []).map((g: any) => g.followUpPerson?.id).filter(Boolean)}
+                existingGuestIds={(course.guests || []).map((g: any) => g.personInvited?.id).filter(Boolean)}
+                onSuccess={onAddPeopleSuccess}
+            />
 
-            {/* GUEST DIALOG */}
+            {/* EDIT GUEST DIALOG (Legacy, kept for editing) */}
             <Dialog open={isGuestDialogOpen} onOpenChange={(open) => {
                 setIsGuestDialogOpen(open);
                 setEnrollError(null);
