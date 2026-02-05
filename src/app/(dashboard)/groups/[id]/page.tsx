@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import AddPeopleDialog from '@/components/courses/AddPeopleDialog';
+import AddMemberDialog from '@/components/shared/participants/AddMemberDialog'; // UPDATED IMPORT
 
 import { useGroupDetails } from '../hooks/useGroupDetails';
 import { GroupDetailsHeader } from './components/GroupDetailsHeader';
@@ -44,7 +44,7 @@ export default function GroupDetailsPage() {
         <div className="space-y-8 max-w-6xl mx-auto pb-10">
             <GroupDetailsHeader
                 group={group}
-                canManage={canManage || false} // Handle undefined safety
+                canManage={canManage || false}
                 isEncargado={isEncargado || false}
                 isFinished={isFinished || false}
                 onAddMemberClick={() => setIsAddPeopleOpen(true)}
@@ -87,7 +87,7 @@ export default function GroupDetailsPage() {
                 </TabsContent>
             </Tabs>
 
-            <AddPeopleDialog
+            <AddMemberDialog
                 open={isAddPeopleOpen}
                 onOpenChange={setIsAddPeopleOpen}
                 type="small-group"

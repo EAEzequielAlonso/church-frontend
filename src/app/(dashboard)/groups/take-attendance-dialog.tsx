@@ -27,11 +27,39 @@ export function TakeAttendanceDialog({ open, onOpenChange, event, members, guest
     // Sync state when event changes or dialog opens
     useEffect(() => {
         if (open && event.attendees) {
-            setSelectedIds(event.attendees.map(a => a.id));
+            const initialIds: string[] = [];
+
+            // 1. Add Members (Attendees matched by Person ID)
+            // (Members usually have their Person ID same as loaded if they are ChurchMembers)
+            // But we iterate 'members' list to check against attendees. 
+            // Correction: The backend `markAttendance` accepts ANY ID.
+            // If we send `member.person.id`, that's good.
+            // If we send `guest.id`, that's good.
+
+            // We need to construct the list of "Source IDs" that result in these "Person IDs".
+
+            const attendeeIds = new Set(event.attendees.map(a => a.id));
+
+            // Check Members
+            members.forEach(m => {
+                if (m.member.person?.id && attendeeIds.has(m.member.person.id)) {
+                    initialIds.push(m.member.person.id);
+                }
+            });
+
+            // Check Guests
+            guests.forEach(g => {
+                const personId = g.followUpPerson?.personInvited?.person?.id || g.personInvited?.person?.id;
+                if (personId && attendeeIds.has(personId)) {
+                    initialIds.push(g.id); // Push the GUEST ID, so the checkbox (which uses g.id) is checked.
+                }
+            });
+
+            setSelectedIds(initialIds);
         } else if (!open) {
             setSelectedIds([]);
         }
-    }, [open, event.attendees, event.id]);
+    }, [open, event.attendees, event.id, members, guests]);
 
     const toggleMember = (personId: string) => {
         setSelectedIds(prev =>
@@ -110,27 +138,50 @@ export function TakeAttendanceDialog({ open, onOpenChange, event, members, guest
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2">Visitantes e Invitados</h4>
                             <div className="space-y-1">
                                 {guests.map(guest => {
-                                    // The ID we send to the backend for marking attendance
-                                    // We can send the Guest Entity ID directly now, as the backend resolves it
+                                    // The ID we send to the backend for marking attendance needs to be something the backend understands.
+                                    // The backend `markAttendance` logic checks: Person ID -> FollowUpPerson ID -> PersonInvited ID -> SmallGroupGuest ID.
+                                    // So sending `guest.id` is safe and preferred for guests/visitors to ensure mapping.
                                     const sendId = guest.id;
 
-                                    // To check if they already have attendance recorded, we look for matches
-                                    // in the attendees list (which contains Person IDs).
-                                    const isChecked = event.attendees?.some(att =>
-                                        att.id === guest.followUpPerson?.personInvited?.person?.id ||
-                                        att.id === guest.personInvited?.person?.id
-                                    );
+                                    // Resolve the "Actual Person ID" if it exists, to check against event.attendees
+                                    const resolvedPersonId = guest.followUpPerson?.personInvited?.person?.id || guest.personInvited?.person?.id;
 
-                                    // We also check selectedIds for the state of the checkboxes during the session
-                                    const isCurrentlySelected = selectedIds.includes(sendId) ||
-                                        (guest.followUpPerson?.personInvited?.person?.id && selectedIds.includes(guest.followUpPerson.personInvited.person.id)) ||
-                                        (guest.personInvited?.person?.id && selectedIds.includes(guest.personInvited.person.id));
+                                    // Check if this guest is considered "Present" (in event.attendees)
+                                    // If we toggled it locally (in selectedIds), that takes precedence.
+
+                                    // Problem: validation logic vs "what to send".
+                                    // Strategy:
+                                    // 1. If present in `event.attendees`, their PERSON ID is there. 
+                                    // 2. We want to operate on a list of IDs to SEND. 
+                                    //    - If already present, we should add their `sendId` (Guest ID) to `selectedIds` initially?
+                                    //    - OR we map everything to Person IDs? No, because new guests don't have Person IDs yet.
+
+                                    // REVISED STRATEGY: 
+                                    // `selectedIds` will verify against: 
+                                    // - `sendId` (if explicitly toggled)
+                                    // - `resolvedPersonId` (if loaded from backend as attendee)
+
+                                    // But `toggleMember` toggles `sendId`. 
+                                    // So we need to Initialize `selectedIds` differently. (See useEffect change below/above or handled here).
+                                    // Actually, let's fix the isChecked logic:
+
+                                    const isPresentInBackend = event.attendees?.some(att => att.id === resolvedPersonId);
+
+                                    // If we have selected/unselected this SPECIFIC guest ID, respect that.
+                                    // But how do we know if we UNSELECTED a backend person?
+                                    // The `selectedIds` state is "List of IDs to SAVE".
+                                    // So it should contain EVERYONE who is present.
+
+                                    // We need to initialize `selectedIds` with `guest.id` if `resolvedPersonId` is in `event.attendees`.
+                                    // This requires a `useEffect` update, but we can also just handle it purely via `selectedIds` if we init correctly.
+
+                                    const isChecked = selectedIds.includes(sendId);
 
                                     return (
                                         <div key={guest.id} className="flex items-center space-x-3 p-2 hover:bg-slate-50 rounded-lg transition-colors group">
                                             <Checkbox
                                                 id={`guest-${guest.id}`}
-                                                checked={isCurrentlySelected}
+                                                checked={isChecked}
                                                 onCheckedChange={() => toggleMember(sendId)}
                                             />
                                             <div className="flex-grow min-w-0">

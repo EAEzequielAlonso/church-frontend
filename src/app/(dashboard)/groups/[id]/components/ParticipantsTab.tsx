@@ -1,8 +1,8 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import { ParticipantRow } from './ParticipantRow';
+import { Button } from '@/components/ui/button'; // If needed for outer buttons
+import ParticipantList from '@/components/shared/participants/ParticipantList'; // New Shared Component
 import { SmallGroup } from '@/types/small-group';
 import { isPast, isToday } from 'date-fns';
 
@@ -16,150 +16,70 @@ interface ParticipantsTabProps {
     isRemoving: boolean;
 }
 
-export function ParticipantsTab({ group, canManage, isFinished, onRemoveMember, onRemoveGuest, onAddGuestClick, isRemoving }: ParticipantsTabProps) {
-    // Attendance Calcs
+export function ParticipantsTab({ group, canManage, isFinished, onRemoveMember, onRemoveGuest }: ParticipantsTabProps) {
+    // Attendance Calcs (Approximate for mapping)
     const pastEvents = group.events?.filter(e => isPast(new Date(e.startDate)) && !isToday(new Date(e.startDate))) || [];
     const totalEvents = pastEvents.length;
 
-    // Categorization
-    const members = group.members || [];
-    const visitors = group.guests?.filter(g => g.followUpPerson) || [];
-    const guests = group.guests?.filter(g => !g.followUpPerson) || [];
+    // TODO: Extract attendance calc logic to a hook or helper if reused elsewhere.
+
+    const mapMember = (m: any) => ({
+        id: m.id,
+        name: `${m.member.person?.firstName} ${m.member.person?.lastName}`,
+        avatarUrl: m.member.person?.avatarUrl,
+        email: m.member.person?.email,
+        phone: m.member.person?.phoneNumber,
+        role: m.role,
+        type: 'MEMBER' as const,
+        attendedCount: pastEvents.filter(ev => (ev.attendees || []).some((att: any) => att.id === m.member.person?.id)).length,
+        totalEvents
+    });
+
+    const mapGuest = (g: any, type: 'VISITOR' | 'GUEST') => {
+        // Resolve the Shadow Person ID for this guest
+        const personId = g.followUpPerson?.personInvited?.person?.id || g.personInvited?.person?.id;
+
+        // Calculate attendance
+        const attendedCount = personId
+            ? pastEvents.filter(ev => (ev.attendees || []).some((att: any) => att.id === personId)).length
+            : 0;
+
+        return {
+            id: g.id,
+            name: g.fullName,
+            email: g.email,
+            phone: g.phone,
+            type,
+            attendedCount,
+            totalEvents
+        };
+    };
+
+    const members = (group.members || []).map(mapMember);
+    const visitors = (group.guests?.filter(g => g.followUpPerson) || []).map(g => mapGuest(g, 'VISITOR'));
+    const guests = (group.guests?.filter(g => !g.followUpPerson) || []).map(g => mapGuest(g, 'GUEST'));
+
+    const handleRemove = (id: string, type: string) => {
+        if (type === 'MEMBER') onRemoveMember(id);
+        else onRemoveGuest(id);
+    };
 
     return (
-        <div className="space-y-6">
-            {/* MEMBERS */}
-            <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="pb-2 bg-slate-50/50">
-                    <div className="flex items-center justify-between w-full">
-                        <CardTitle className="text-lg font-semibold text-slate-800">Miembros</CardTitle>
-                        <Badge variant="outline" className="bg-white">{members.length} Total</Badge>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="divide-y divide-slate-100">
-                        {members.map((member) => (
-                            <ParticipantRow
-                                key={member.id}
-                                name={`${member.member.person?.firstName} ${member.member.person?.lastName}`}
-                                photoUrl={member.member.person?.avatarUrl || null}
-                                email={member.member.person?.email}
-                                phone={member.member.person?.phoneNumber}
-                                roleBadge={member.role === 'MODERATOR' ? <Badge className="bg-indigo-600 text-[10px] px-1.5 h-5">LÍDER</Badge> : undefined}
-                                roleText={member.role === 'MODERATOR' ? 'Encargado del Grupo' : 'Participante / Miembro'}
-                                attendanceProps={{
-                                    attendedCount: pastEvents.filter(ev =>
-                                        (ev.attendees || []).some((att: any) => att.id === member.member.person?.id)
-                                    ).length,
-                                    totalEvents
-                                }}
-                                onRemove={() => onRemoveMember(member.id)}
-                                isRemoving={isRemoving}
-                                canManage={canManage}
-                            />
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* VISITORS */}
-            {visitors.length > 0 && (
-                <Card className="border-slate-200 shadow-sm">
-                    <CardHeader className="pb-2 bg-slate-50/50">
-                        <div className="flex items-center justify-between w-full">
-                            <CardTitle className="text-lg font-semibold text-slate-800">Visitantes</CardTitle>
-                            <Badge variant="outline" className="bg-white">{visitors.length} Total</Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="divide-y divide-slate-100">
-                            {visitors.map((guest) => (
-                                <ParticipantRow
-                                    key={guest.id}
-                                    name={guest.fullName}
-                                    photoUrl={null}
-                                    email={guest.email}
-                                    phone={guest.phone}
-                                    roleBadge={<Badge variant="secondary" className="text-[10px] px-1.5 h-5 bg-blue-100 text-blue-700 border-blue-200">VISITANTE</Badge>}
-                                    roleText="En seguimiento"
-                                    attendanceProps={{
-                                        attendedCount: (() => {
-                                            const visitorId = guest.followUpPerson?.id;
-                                            const personId = guest.followUpPerson?.personInvited?.person?.id;
-                                            const invitedId = guest.personInvited?.id;
-                                            const guestId = guest.id;
-
-                                            return pastEvents.filter(ev =>
-                                                (ev.attendees || []).some((att: any) =>
-                                                    att.id === guestId ||
-                                                    (visitorId && att.id === visitorId) ||
-                                                    (personId && att.id === personId) ||
-                                                    (invitedId && att.id === invitedId) ||
-                                                    (guest.personInvited?.person?.id && att.id === guest.personInvited.person.id)
-                                                )
-                                            ).length;
-                                        })(),
-                                        totalEvents
-                                    }}
-                                    onRemove={() => onRemoveGuest(guest.id)}
-                                    isRemoving={isRemoving}
-                                    canManage={canManage}
-                                />
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* GUESTS */}
-            <div className="grid gap-4">
-                <Card className="border-slate-200 shadow-sm">
-                    <CardHeader className="pb-2 bg-slate-50/50">
-                        <div className="flex items-center justify-between w-full">
-                            <CardTitle className="text-lg font-semibold text-slate-800">Invitados</CardTitle>
-                            <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="bg-white">{guests.length} Total</Badge>
-
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="divide-y divide-slate-100">
-                            {guests.length === 0 && <div className="p-8 text-center text-slate-400">No hay invitados en este grupo.</div>}
-                            {guests.map((guest) => (
-                                <ParticipantRow
-                                    key={guest.id}
-                                    name={guest.fullName}
-                                    photoUrl={null}
-                                    email={guest.email}
-                                    phone={guest.phone}
-                                    roleBadge={<Badge variant="secondary" className="text-[10px] px-1.5 h-5 bg-orange-100 text-orange-700 border-orange-200">INVITADO</Badge>}
-                                    roleText="Invitado externo / Amigo"
-                                    attendanceProps={{
-                                        attendedCount: (() => {
-                                            const invitedId = guest.personInvited?.id;
-                                            const personId = guest.personInvited?.person?.id;
-                                            const guestId = guest.id;
-
-                                            return pastEvents.filter(ev =>
-                                                (ev.attendees || []).some((att: any) =>
-                                                    att.id === guestId ||
-                                                    (invitedId && att.id === invitedId) ||
-                                                    (personId && att.id === personId)
-                                                )
-                                            ).length;
-                                        })(),
-                                        totalEvents
-                                    }}
-                                    onRemove={() => onRemoveGuest(guest.id)}
-                                    isRemoving={isRemoving}
-                                    canManage={canManage}
-                                />
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
+        <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+                <CardTitle>Participantes del Grupo</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ParticipantList
+                    members={members}
+                    visitors={visitors}
+                    guests={guests}
+                    canManage={canManage}
+                    onRemove={handleRemove}
+                // onEditGuest not implemented in Groups tab currently? Or logic exists?
+                // Groups tab passed 'onRemove' but not explicitly edit.
+                />
+            </CardContent>
+        </Card>
     );
 }
