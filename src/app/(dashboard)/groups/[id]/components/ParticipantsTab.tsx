@@ -119,12 +119,7 @@ export function ParticipantsTab({ group, canManage, isFinished, onRemoveMember, 
                             <CardTitle className="text-lg font-semibold text-slate-800">Invitados</CardTitle>
                             <div className="flex items-center gap-3">
                                 <Badge variant="outline" className="bg-white">{guests.length} Total</Badge>
-                                {canManage && (
-                                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onAddGuestClick} disabled={isFinished}>
-                                        <Plus className="w-3 h-3 mr-1" />
-                                        Agregar Invitado
-                                    </Button>
-                                )}
+
                             </div>
                         </div>
                     </CardHeader>

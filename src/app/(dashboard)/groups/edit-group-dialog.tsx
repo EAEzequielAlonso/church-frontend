@@ -31,11 +31,13 @@ export function EditGroupDialog({ group, onGroupUpdated, trigger }: EditGroupDia
         currentTopic: '',
         studyMaterial: '',
         openEnrollment: false,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        leaderId: ''
     });
 
     useEffect(() => {
         if (group && open) {
+            const currentLeader = group.members?.find(m => m.role === 'MODERATOR');
             setFormData({
                 name: group.name || '',
                 description: group.description || '',
@@ -46,7 +48,8 @@ export function EditGroupDialog({ group, onGroupUpdated, trigger }: EditGroupDia
                 currentTopic: group.currentTopic || '',
                 studyMaterial: group.studyMaterial || '',
                 openEnrollment: group.openEnrollment || false,
-                status: group.status || 'ACTIVE'
+                status: group.status || 'ACTIVE',
+                leaderId: currentLeader?.member?.id || ''
             });
         }
     }, [group, open]);
@@ -132,6 +135,36 @@ export function EditGroupDialog({ group, onGroupUpdated, trigger }: EditGroupDia
                             </Select>
                             <p className="text-xs text-slate-500 mt-2">
                                 * Los grupos finalizados pasan a <strong>Solo Lectura</strong> y no permiten agregar participantes ni eventos.
+                            </p>
+                        </div>
+
+
+
+                        {/* Leader Selection (Restricted to Group Members) */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="leaderId" className="font-semibold">Encargado (Líder)</Label>
+                            <Select
+                                value={formData.leaderId}
+                                onValueChange={(val) => handleSelectChange('leaderId', val)}
+                                disabled={!group.members || group.members.length === 0}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar encargado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {group.members?.map((m) => (
+                                        <SelectItem key={m.member.id} value={m.member.id}>
+                                            {m.member.person?.firstName} {m.member.person?.lastName}
+                                            {m.role === 'MODERATOR' ? ' (Actual)' : ''}
+                                        </SelectItem>
+                                    ))}
+                                    {(!group.members || group.members.length === 0) && (
+                                        <SelectItem value="none" disabled>No hay participantes en el grupo</SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-slate-500">
+                                * Solo puedes asignar como encargado a alguien que ya sea participante del grupo.
                             </p>
                         </div>
 
@@ -257,6 +290,6 @@ export function EditGroupDialog({ group, onGroupUpdated, trigger }: EditGroupDia
                     </DialogFooter>
                 </form>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

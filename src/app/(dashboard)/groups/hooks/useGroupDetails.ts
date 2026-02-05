@@ -40,11 +40,16 @@ export function useGroupDetails(groupId: string) {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error();
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || 'No se pudo eliminar al miembro');
+            }
+
             toast.success('Miembro eliminado');
             fetchGroup();
-        } catch (error) {
-            toast.error('No se pudo eliminar al miembro');
+        } catch (error: any) {
+            toast.error(error.message || 'No se pudo eliminar al miembro');
         } finally {
             setIsRemoving(false);
         }
@@ -58,11 +63,16 @@ export function useGroupDetails(groupId: string) {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error();
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || 'No se pudo eliminar al invitado');
+            }
+
             toast.success('Invitado eliminado');
             fetchGroup();
-        } catch (error) {
-            toast.error('No se pudo eliminar al invitado');
+        } catch (error: any) {
+            toast.error(error.message || 'No se pudo eliminar al invitado');
         } finally {
             setIsRemoving(false);
         }
@@ -93,11 +103,16 @@ export function useGroupDetails(groupId: string) {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error();
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || 'No se pudo salir del grupo');
+            }
+
             toast.success('Has salido del grupo');
             router.push('/groups');
-        } catch (error) {
-            toast.error('No se pudo salir del grupo');
+        } catch (error: any) {
+            toast.error(error.message || 'No se pudo salir del grupo');
         }
     };
 

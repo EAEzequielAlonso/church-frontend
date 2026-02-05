@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,8 @@ interface CreateGroupDialogProps {
 export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [members, setMembers] = useState<any[]>([]);
+    const [isLoadingMembers, setIsLoadingMembers] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -26,11 +28,35 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
         meetingTime: '',
         address: '',
         currentTopic: '',
-        address: '',
-        currentTopic: '',
         studyMaterial: '',
-        openEnrollment: false
+        openEnrollment: false,
+        leaderId: ''
     });
+
+    useEffect(() => {
+        if (open) {
+            fetchMembers();
+        }
+    }, [open]);
+
+    const fetchMembers = async () => {
+        setIsLoadingMembers(true);
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/members`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setMembers(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch members', error);
+            toast.error('Error al cargar miembros');
+        } finally {
+            setIsLoadingMembers(false);
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -69,7 +95,8 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
                 address: '',
                 currentTopic: '',
                 studyMaterial: '',
-                openEnrollment: false
+                openEnrollment: false,
+                leaderId: ''
             });
             onGroupCreated();
         } catch (error) {
@@ -111,6 +138,33 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
                                 onChange={handleChange}
                                 required
                             />
+                        </div>
+
+                        {/* Leader Selection */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="leaderId" className="font-semibold">Encargado (Líder) *</Label>
+                            <Select
+                                value={formData.leaderId}
+                                onValueChange={(val) => handleSelectChange('leaderId', val)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={isLoadingMembers ? "Cargando miembros..." : "Seleccionar encargado"} />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[200px]">
+                                    {members.length === 0 ? (
+                                        <SelectItem value="none" disabled>No hay miembros disponibles</SelectItem>
+                                    ) : (
+                                        members.map((member) => (
+                                            <SelectItem key={member.id} value={member.id}>
+                                                {member.person?.firstName} {member.person?.lastName}
+                                            </SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-slate-500">
+                                * El encargado será asignado automáticamente como MODERADOR del grupo.
+                            </p>
                         </div>
 
                         <div className="grid gap-2">
