@@ -12,6 +12,7 @@ import { useState } from "react";
 import { MemberDetailsDialog } from "./member-details-dialog";
 import { UpdateMemberDialog } from "./update-member-dialog";
 import { DeleteMemberAlert } from "./delete-member-alert";
+import { ArchiveMemberAlert } from "./archive-member-alert";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ interface MemberActionsMenuProps {
 export function MemberActionsMenu({ member, onRefresh }: MemberActionsMenuProps) {
     const [updateOpen, setUpdateOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [archiveOpen, setArchiveOpen] = useState(false);
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [memberDetails, setMemberDetails] = useState<any>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
@@ -59,6 +61,19 @@ export function MemberActionsMenu({ member, onRefresh }: MemberActionsMenuProps)
                         <UserCog className="w-4 h-4 mr-2" />
                         Editar Roles/Estado
                     </DropdownMenuItem>
+
+                    {member.membershipStatus !== 'ARCHIVED' ? (
+                        <DropdownMenuItem onClick={() => setArchiveOpen(true)}>
+                            <Trash2 className="w-4 h-4 mr-2 text-orange-500" />
+                            <span className="text-orange-500">Archivar</span>
+                        </DropdownMenuItem>
+                    ) : (
+                        <DropdownMenuItem onClick={() => setArchiveOpen(true)}>
+                            <UserCog className="w-4 h-4 mr-2 text-green-600" />
+                            <span className="text-green-600">Restaurar</span>
+                        </DropdownMenuItem>
+                    )}
+
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteOpen(true)}>
                         <Trash2 className="w-4 h-4 mr-2" />
@@ -81,6 +96,13 @@ export function MemberActionsMenu({ member, onRefresh }: MemberActionsMenuProps)
             <UpdateMemberDialog
                 isOpen={updateOpen}
                 onClose={() => setUpdateOpen(false)}
+                member={member}
+                onSuccess={onRefresh}
+            />
+
+            <ArchiveMemberAlert
+                isOpen={archiveOpen}
+                onClose={() => setArchiveOpen(false)}
                 member={member}
                 onSuccess={onRefresh}
             />

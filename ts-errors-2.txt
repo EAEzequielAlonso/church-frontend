@@ -1,0 +1,6 @@
+﻿src/app/(dashboard)/community/[id]/page.tsx(60,13): error TS2322: Type '{ children: Element; title: string; description: string; onBack: () => void; }' is not assignable to type 'IntrinsicAttributes & PageContainerProps'.
+  Property 'onBack' does not exist on type 'IntrinsicAttributes & PageContainerProps'.
+src/app/(dashboard)/courses/page.tsx(92,36): error TS2339: Property 'familyId' does not exist on type 'User'.
+src/features/groups/components/GroupDetail.tsx(120,25): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/features/groups/components/GroupList.tsx(12,10): error TS2305: Module '"./GroupForm"' has no exported member 'GroupForm'.

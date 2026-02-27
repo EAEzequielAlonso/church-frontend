@@ -7,15 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertCircle, ArrowLeft, Check, Shield, User, Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, Shield, User, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { MemberSearchDialog } from '@/components/counseling/MemberSearchDialog';
 
 export default function NewCounselingProcessPage() {
     const [step, setStep] = useState(1);
     const [type, setType] = useState<'INFORMAL' | 'FORMAL' | null>(null);
-    const [members, setMembers] = useState<any[]>([]);
-    const [counseleeId, setCounseleeId] = useState('');
+    const [selectedMember, setSelectedMember] = useState<any>(null); // Store full member object
+    const [openSearch, setOpenSearch] = useState(false);
+
+    // Derived for backward compat if needed, or just use selectedMember.id
+    const counseleeId = selectedMember?.id || '';
+
     const [motive, setMotive] = useState('');
     const [loading, setLoading] = useState(false);
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
@@ -40,16 +45,20 @@ export default function NewCounselingProcessPage() {
                     (typeof r === 'string' ? r : r.name)?.toUpperCase() === 'ADMIN'
                 );
 
+                const isCounselor = userData.roles?.some((r: any) =>
+                    (typeof r === 'string' ? r : r.name)?.toUpperCase() === 'COUNSELOR'
+                );
+
                 // We need to check the member profile for isAuthorizedCounselor
                 // auth/me usually returns the user, but let's check if it has the member info.
                 // If not, we fetch it.
                 if (userData.person?.memberships) {
                     const activeChurchId = userData.churchId;
                     const memberProfile = userData.person.memberships.find((m: any) => m.churchId === activeChurchId);
-                    setIsAuthorized(memberProfile?.isAuthorizedCounselor || isPlatAdmin || isChurchAdmin);
+                    setIsAuthorized(memberProfile?.isAuthorizedCounselor || isPlatAdmin || isChurchAdmin || isCounselor);
                 } else {
                     // Fallback or retry with member details if needed
-                    setIsAuthorized(isPlatAdmin || isChurchAdmin);
+                    setIsAuthorized(isPlatAdmin || isChurchAdmin || isCounselor);
                 }
             }
         } catch (error) {
@@ -57,33 +66,16 @@ export default function NewCounselingProcessPage() {
         }
     };
 
-    useEffect(() => {
-        if (step === 2 && members.length === 0) {
-            fetchMembers();
-        }
-    }, [step]);
+    // Removed fetchMembers effect as it is no longer needed with search dialog
 
-    const fetchMembers = async () => {
-        try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003'}/members`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setMembers(data);
-            }
-        } catch (error) {
-            toast.error('Error cargando miembros');
-        }
-    };
+    // Removed fetchMembers function
 
     const handleSubmit = async () => {
         if (!type || !motive) {
             toast.error('Completa los campos requeridos');
             return;
         }
-        if (type === 'FORMAL' && !counseleeId) {
+        if (type === 'FORMAL' && !selectedMember) {
             toast.error('Selecciona a la persona a aconsejar');
             return;
         }
@@ -99,7 +91,7 @@ export default function NewCounselingProcessPage() {
                 },
                 body: JSON.stringify({
                     type,
-                    counseleeId,
+                    counseleeId: selectedMember.id,
                     motive
                 })
             });
@@ -160,8 +152,8 @@ export default function NewCounselingProcessPage() {
 
                         <Card
                             className={`transition-all ${!isAuthorized
-                                    ? 'opacity-60 grayscale cursor-not-allowed border-dashed bg-slate-50'
-                                    : 'cursor-pointer hover:border-primary'
+                                ? 'opacity-60 grayscale cursor-not-allowed border-dashed bg-slate-50'
+                                : 'cursor-pointer hover:border-primary'
                                 } ${type === 'FORMAL' ? 'border-primary ring-2 ring-primary/20 bg-blue-50/50' : ''}`}
                             onClick={() => isAuthorized && setType('FORMAL')}
                         >
@@ -209,27 +201,22 @@ export default function NewCounselingProcessPage() {
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label>¿A quién vas a aconsejar?</Label>
-                            <Select onValueChange={setCounseleeId} value={counseleeId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un miembro..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {members.map((m) => (
-                                        <SelectItem key={m.id} value={m.id}>
-                                            <div className="flex items-center gap-2">
-                                                {m.person?.avatarUrl ? (
-                                                    <img src={m.person.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
-                                                ) : (
-                                                    <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                                        {m.person?.fullName?.[0] || 'U'}
-                                                    </div>
-                                                )}
-                                                <span>{m.person?.fullName || 'Miembro desconocido'}</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal"
+                                    onClick={() => setOpenSearch(true)}
+                                >
+                                    <Search className="mr-2 h-4 w-4" />
+                                    {selectedMember ? (selectedMember.person?.fullName || 'Miembro seleccionado') : "Buscar miembro..."}
+                                </Button>
+                            </div>
+
+                            <MemberSearchDialog
+                                open={openSearch}
+                                onOpenChange={setOpenSearch}
+                                onSelect={(member) => setSelectedMember(member)}
+                            />
                             {type === 'FORMAL' && (
                                 <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
                                     <AlertCircle className="w-3 h-3" />
@@ -250,7 +237,7 @@ export default function NewCounselingProcessPage() {
 
                     <div className="flex justify-between pt-4">
                         <Button variant="outline" onClick={() => setStep(1)}>Atrás</Button>
-                        <Button disabled={!motive || (type === 'FORMAL' && !counseleeId)} onClick={() => setStep(3)}>
+                        <Button disabled={!motive || (type === 'FORMAL' && !selectedMember)} onClick={() => setStep(3)}>
                             Revisar y Confirmar
                         </Button>
                     </div>
@@ -285,7 +272,9 @@ export default function NewCounselingProcessPage() {
                             <div className="flex justify-between border-b pb-2">
                                 <span className="text-gray-500">Aconsejado</span>
                                 <span className="font-medium">
-                                    {members.find(m => m.id === counseleeId)?.person?.fullName || 'No especificado'}
+                                    <span className="font-medium">
+                                        {selectedMember?.person?.fullName || 'No especificado'}
+                                    </span>
                                 </span>
                             </div>
                             <div className="flex justify-between border-b pb-2">

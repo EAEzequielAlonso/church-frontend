@@ -17,7 +17,7 @@ interface MemberDetailsDialogProps {
 export function MemberDetailsDialog({ isOpen, onClose, member, loading, onEdit }: MemberDetailsDialogProps) {
     if (!member) return null;
 
-    const isMember = member.status === 'MEMBER';
+    const isMember = member.membershipStatus === 'MEMBER' || member.membershipStatus === 'CHILD';
     const hasUser = member.person?.user;
     const canEdit = !hasUser && onEdit;
 
@@ -45,9 +45,9 @@ export function MemberDetailsDialog({ isOpen, onClose, member, loading, onEdit }
                                 <h3 className="text-xl font-bold text-slate-900">{member.person?.fullName}</h3>
                                 <p className="text-slate-500">{member.person?.email}</p>
                                 <div className="flex gap-2 mt-2 flex-wrap">
-                                    {ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA] && (
-                                        <Badge className={ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA].color + " border-0"}>
-                                            {ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA].label}
+                                    {member.membershipStatus && ROLE_UI_METADATA[member.membershipStatus as keyof typeof ROLE_UI_METADATA] && (
+                                        <Badge className={ROLE_UI_METADATA[member.membershipStatus as keyof typeof ROLE_UI_METADATA].color + " border-0"}>
+                                            {ROLE_UI_METADATA[member.membershipStatus as keyof typeof ROLE_UI_METADATA].label}
                                         </Badge>
                                     )}
 

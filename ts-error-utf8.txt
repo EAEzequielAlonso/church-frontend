@@ -1,0 +1,10 @@
+﻿src/app/(dashboard)/discipleship/[id]/page.tsx(45,26): error TS2339: Property 'isPlatformAdmin' does not exist on type 'User'.
+src/app/(dashboard)/followups/page.tsx(130,17): error TS2322: Type '(type: "EDIT" | "ARCHIVE" | "PROMOTE" | "DELETE", item: FollowUpPerson) => void' is not assignable to type '(type: "DELETE" | "EDIT" | "ARCHIVE" | "PROMOTE" | "ASSIGN", item: FollowUpPerson) => void'.
+  Types of parameters 'type' and 'type' are incompatible.
+    Type '"DELETE" | "EDIT" | "ARCHIVE" | "PROMOTE" | "ASSIGN"' is not assignable to type '"DELETE" | "EDIT" | "ARCHIVE" | "PROMOTE"'.
+      Type '"ASSIGN"' is not assignable to type '"DELETE" | "EDIT" | "ARCHIVE" | "PROMOTE"'.
+src/app/(dashboard)/visitors/page.tsx(210,21): error TS2322: Type '{ item: FollowUpPerson; open: true; onOpenChange: (open: boolean) => false | void; onSuccess: () => void; }' is not assignable to type 'IntrinsicAttributes & FollowUpEditDialogProps'.
+  Property 'item' does not exist on type 'IntrinsicAttributes & FollowUpEditDialogProps'.
+src/components/discipleship/NotesTab.tsx(173,83): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'null'.
+  Type 'string' is not assignable to type 'null'.
+src/features/treasury/api/reports.api.ts(3,10): error TS2305: Module '"../types/treasury.types"' has no exported member 'TransactionType'.

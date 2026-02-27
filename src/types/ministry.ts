@@ -45,6 +45,7 @@ export interface MinistryTask {
     id: string;
     title: string;
     description?: string;
+    observation?: string;
     assignedTo?: {
         id: string;
         person: Person;

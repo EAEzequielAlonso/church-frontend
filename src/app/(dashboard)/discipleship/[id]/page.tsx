@@ -42,7 +42,7 @@ export default function DiscipleshipDetailPage({ params }: { params: Promise<{ i
     let myRole = myParticipant?.role;
 
     // Check if I am a Supervisor/Admin not in list? 
-    if (!myRole && user?.isPlatformAdmin) myRole = DiscipleshipRole.SUPERVISOR;
+    if (!myRole && user?.systemRole === 'ADMIN_APP') myRole = DiscipleshipRole.SUPERVISOR;
 
     return (
         <DiscipleshipDetailView

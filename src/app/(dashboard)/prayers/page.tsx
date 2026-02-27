@@ -69,6 +69,18 @@ export default function PrayerWallPage() {
         }
     };
 
+    const handleDelete = async (id: string) => {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta petición? Esta acción no se puede deshacer.')) return;
+
+        try {
+            await api.delete(`/prayers/${id}`);
+            toast.success('Petición eliminada');
+            mutate();
+        } catch (error) {
+            toast.error('Error al eliminar la petición');
+        }
+    };
+
     const handleDialogSuccess = () => {
         setEditingRequest(null);
         mutate();
@@ -148,6 +160,7 @@ export default function PrayerWallPage() {
                                         onAnswer={handleAnswer}
                                         onStatusChange={handleStatusChange}
                                         onToggleHidden={handleToggleHidden}
+                                        onDelete={handleDelete}
                                     />
                                 ))}
                             </div>
@@ -174,6 +187,7 @@ export default function PrayerWallPage() {
                                         onAnswer={handleAnswer}
                                         onStatusChange={handleStatusChange}
                                         onToggleHidden={handleToggleHidden}
+                                        onDelete={handleDelete}
                                     />
                                 ))}
                             </div>

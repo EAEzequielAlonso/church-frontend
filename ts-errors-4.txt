@@ -1,0 +1,6 @@
+﻿.next/dev/types/validator.ts(51,39): error TS2307: Cannot find module '../../../src/app/(dashboard)/activities/[id]/page.js' or its corresponding type declarations.
+.next/dev/types/validator.ts(60,39): error TS2307: Cannot find module '../../../src/app/(dashboard)/activities/page.js' or its corresponding type declarations.
+.next/dev/types/validator.ts(105,39): error TS2307: Cannot find module '../../../src/app/(dashboard)/courses/[id]/page.js' or its corresponding type declarations.
+.next/dev/types/validator.ts(114,39): error TS2307: Cannot find module '../../../src/app/(dashboard)/courses/page.js' or its corresponding type declarations.
+.next/dev/types/validator.ts(195,39): error TS2307: Cannot find module '../../../src/app/(dashboard)/groups/[id]/page.js' or its corresponding type declarations.
+.next/dev/types/validator.ts(204,39): error TS2307: Cannot find module '../../../src/app/(dashboard)/groups/page.js' or its corresponding type declarations.

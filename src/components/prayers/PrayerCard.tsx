@@ -15,15 +15,21 @@ interface PrayerCardProps {
     onAnswer: (req: any) => void;
     onStatusChange: (id: string, status: string) => void;
     onToggleHidden: (id: string, isHidden: boolean) => void;
+    onDelete: (id: string) => void;
 }
 
-export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange, onToggleHidden }: PrayerCardProps) {
+export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange, onToggleHidden, onDelete }: PrayerCardProps) {
     const { user } = useAuth();
 
-    // Check if user is author
-    // API returns member object. We need to check if user.memberId matches request.member.id
+    // Check permissions
     const isAuthor = user?.memberId === request.member?.id;
-    const canModerate = user?.roles?.includes('ADMIN_APP') || user?.roles?.includes('PASTOR');
+    const canModerate = user?.roles?.includes('ADMIN_APP') ||
+        user?.roles?.includes('PASTOR') ||
+        user?.roles?.includes('AUDITOR') ||
+        user?.roles?.includes('ADMIN_CHURCH');
+
+    const canDelete = isAuthor || canModerate;
+    // ... rest of component ...
 
 
     const getVisibilityBadge = () => {
@@ -69,7 +75,8 @@ export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange, 
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                {(isAuthor || canModerate) && request.status !== 'ANSWERED' && (
+                                {/* Author Actions */}
+                                {isAuthor && request.status !== 'ANSWERED' && (
                                     <>
                                         <DropdownMenuItem onClick={() => onEdit(request)}>
                                             <PenSquare className="w-4 h-4 mr-2" /> Editar
@@ -80,6 +87,14 @@ export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange, 
                                     </>
                                 )}
 
+                                {/* Delete for Author (if not already deleted) */}
+                                {isAuthor && (
+                                    <DropdownMenuItem onClick={() => onDelete(request.id)} className="text-red-600 focus:text-red-700 focus:bg-red-50">
+                                        <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                                    </DropdownMenuItem>
+                                )}
+
+                                {/* Moderation Actions */}
                                 {canModerate && (
                                     <>
                                         <DropdownMenuSeparator />
@@ -93,9 +108,12 @@ export default function PrayerCard({ request, onEdit, onAnswer, onStatusChange, 
                                                 <EyeOff className="w-4 h-4 mr-2" /> Ocultar
                                             </DropdownMenuItem>
                                         )}
-                                        <DropdownMenuItem onClick={() => onStatusChange(request.id, 'DELETED')} className="text-red-600 focus:text-red-700 focus:bg-red-50">
-                                            <Trash2 className="w-4 h-4 mr-2" /> Eliminar
-                                        </DropdownMenuItem>
+                                        {/* Moderator Delete (if not author, to avoid double button) */}
+                                        {!isAuthor && (
+                                            <DropdownMenuItem onClick={() => onDelete(request.id)} className="text-red-600 focus:text-red-700 focus:bg-red-50">
+                                                <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                                            </DropdownMenuItem>
+                                        )}
                                     </>
                                 )}
                             </DropdownMenuContent>

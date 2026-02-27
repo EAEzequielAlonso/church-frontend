@@ -6,13 +6,14 @@ import PageContainer from '@/components/ui/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, Plus, User, CheckCircle, RotateCcw } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSunday, addMonths, subMonths, isSameDay } from 'date-fns';
+import { ChevronLeft, ChevronRight, Plus, User, CheckCircle, RotateCcw, Trash2, Calendar } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import useSWR from 'swr';
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,9 +22,18 @@ import { toast } from 'sonner';
 export default function MinistrySchedulePage() {
     const { id: ministryId } = useParams();
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
+    const [selectedWeekday, setSelectedWeekday] = useState<string>('0'); // Default Sunday
     const [selectedCell, setSelectedCell] = useState<{ date: Date, roleId: string, currentAssignment?: any } | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+    const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
+
+    // Form State for Metadata
+    const [metaTitle, setMetaTitle] = useState('');
+    const [metaPassage, setMetaPassage] = useState('');
+    const [metaSongsBefore, setMetaSongsBefore] = useState('');
+    const [metaSongsAfter, setMetaSongsAfter] = useState('');
+    const [metaAnnouncements, setMetaAnnouncements] = useState('');
 
     // Fetch Data
     const { data: ministry } = useSWR(`/ministries/${ministryId}`, url => api.get(url).then(r => r.data));
@@ -40,11 +50,11 @@ export default function MinistrySchedulePage() {
 
     const members = ministry?.members || [];
 
-    // Calculate Sundays (or service days)
+    // Calculate Days based on selector
     const serviceDays = useMemo(() => {
         const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-        return days.filter(day => isSunday(day));
-    }, [currentMonth]);
+        return days.filter(day => day.getDay() === parseInt(selectedWeekday));
+    }, [currentMonth, selectedWeekday]);
 
     const handlePrevMonth = () => setCurrentMonth(prev => subMonths(prev, 1));
     const handleNextMonth = () => setCurrentMonth(prev => addMonths(prev, 1));
@@ -64,12 +74,32 @@ export default function MinistrySchedulePage() {
 
     const handleCellClick = (roleId: string, date: Date, assignment?: any) => {
         setSelectedCell({ date, roleId, currentAssignment: assignment });
-        // Preset selected member if assignment exists for better UX
-        // find ministry member id from assignment person id ?
-        // This is tricky if we don't have direct mapping, but let's try to match by Person ID
-        if (assignment && assignment.person) {
-            const mMember = members.find((m: any) => m.member.person.id === assignment.person.id);
-            if (mMember) setSelectedMemberId(mMember.id);
+
+        // Reset Form
+        setMetaTitle('');
+        setMetaPassage('');
+        setMetaSongsBefore('');
+        setMetaSongsAfter('');
+        setMetaAnnouncements('');
+
+        if (assignment) {
+            // Pre-fill if editing
+            if (assignment.metadata) {
+                setMetaTitle(assignment.metadata.title || '');
+                setMetaPassage(assignment.metadata.passage || '');
+                setMetaSongsBefore(assignment.metadata.songsBefore || '');
+                setMetaSongsAfter(assignment.metadata.songsAfter || '');
+                // Handle legacy or specific fields
+                if (assignment.metadata.songs) setMetaSongsBefore(assignment.metadata.songs);
+            }
+
+            // Preset selected member
+            if (assignment.person) {
+                const mMember = members.find((m: any) => m.member.person.id === assignment.person.id);
+                if (mMember) setSelectedMemberId(mMember.id);
+            } else {
+                setSelectedMemberId(null);
+            }
         } else {
             setSelectedMemberId(null);
         }
@@ -82,9 +112,6 @@ export default function MinistrySchedulePage() {
 
         // If no new selection, but we have an assignment, verify if we need to keep same person
         if (!activeMemberId && selectedCell?.currentAssignment) {
-            // We need the ministry member ID to proceed with same person? NO, we ideally need PersonID.
-            // But my logic below uses activeMemberId (MinistryMember) -> PersonID.
-            // Let's rely on finding ministry member from assignment again
             const currentPersonId = selectedCell.currentAssignment.person.id;
             const mMember = members.find((m: any) => m.member.person.id === currentPersonId);
             activeMemberId = mMember?.id;
@@ -99,42 +126,13 @@ export default function MinistrySchedulePage() {
         if (!member?.member?.person?.id) return;
         const personId = member.member.person.id;
 
-        // Extract metadata if available
-        let metadata: any = {};
-        try {
-            const titleInput = document.getElementById('meta-title') as HTMLInputElement;
-            const passageInput = document.getElementById('meta-passage') as HTMLInputElement;
-            const songsBeforeInput = document.getElementById('meta-songs-before') as HTMLTextAreaElement;
-            const songsAfterInput = document.getElementById('meta-songs-after') as HTMLTextAreaElement;
-            // Legacy check
-            const songsInput = document.getElementById('meta-songs') as HTMLTextAreaElement;
-
-            if (titleInput || passageInput) {
-                metadata = { ...metadata, title: titleInput?.value, passage: passageInput?.value };
-            }
-
-            // New logic for Announcements
-            const announcementsInput = document.getElementById('meta-announcements') as HTMLTextAreaElement;
-            if (announcementsInput) {
-                metadata = { ...metadata, title: announcementsInput.value };
-            }
-
-            if (songsBeforeInput || songsAfterInput) {
-                metadata = {
-                    ...metadata,
-                    songsBefore: songsBeforeInput?.value,
-                    songsAfter: songsAfterInput?.value
-                };
-            } else if (songsInput) {
-                // Fallback if we reverted or somehow legacy field exists
-                metadata = { ...metadata, songs: songsInput?.value };
-            }
-
-            // Should preserve existing metadata if fields are missing? 
-            // In this UI, fields only appear if role type matches.
-            // If we are editing, we probably want to merge or overwrite.
-            // For now, overwrite is safer to clear values.
-        } catch (e) { console.error("Error collecting metadata", e); }
+        // Construct metadata
+        const metadata: any = {};
+        if (metaTitle) metadata.title = metaTitle;
+        if (metaPassage) metadata.passage = metaPassage;
+        if (metaSongsBefore) metadata.songsBefore = metaSongsBefore;
+        if (metaSongsAfter) metadata.songsAfter = metaSongsAfter;
+        if (metaAnnouncements) metadata.title = metaAnnouncements; // Map announcements to title for consistency if that's the convention
 
         try {
             await api.post(`/ministries/${ministryId}/schedule`, {
@@ -166,6 +164,24 @@ export default function MinistrySchedulePage() {
         }
     };
 
+    const handleQuickDelete = async (assignmentId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setAssignmentToDelete(assignmentId);
+    };
+
+    const confirmDelete = async () => {
+        if (!assignmentToDelete) return;
+        try {
+            await api.delete(`/ministries/${ministryId}/schedule/${assignmentToDelete}`);
+            toast.success('Asignación eliminada');
+            refreshAssignments();
+        } catch (error) {
+            toast.error('Error al eliminar');
+        } finally {
+            setAssignmentToDelete(null);
+        }
+    };
+
     if (!ministry || !duties) return <PageContainer title="Cargando..." description=""><Skeleton className="w-full h-64" /></PageContainer>;
 
     return (
@@ -177,19 +193,37 @@ export default function MinistrySchedulePage() {
             <div className="flex flex-col space-y-6">
 
                 {/* Controls */}
-                <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <div className="flex flex-col sm:flex-row items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100 gap-4">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="icon" onClick={handlePrevMonth}>
                             <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <h2 className="text-xl font-bold capitalize w-48 text-center text-slate-800">
+                        <h2 className="text-xl font-bold capitalize w-48 text-center text-slate-800 flex items-center justify-center gap-2">
+                            <Calendar className="w-5 h-5 text-slate-400" />
                             {format(currentMonth, 'MMMM yyyy', { locale: es })}
                         </h2>
                         <Button variant="outline" size="icon" onClick={handleNextMonth}>
                             <ChevronRight className="w-4 h-4" />
                         </Button>
                     </div>
-                    {/* Potential Filters or Auto-Assign Button here */}
+
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-slate-500">Ver días:</span>
+                        <Select value={selectedWeekday} onValueChange={setSelectedWeekday}>
+                            <SelectTrigger className="w-[180px] bg-slate-50 border-slate-200">
+                                <SelectValue placeholder="Día de Servicio" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="0">Domingos</SelectItem>
+                                <SelectItem value="1">Lunes</SelectItem>
+                                <SelectItem value="2">Martes</SelectItem>
+                                <SelectItem value="3">Miércoles</SelectItem>
+                                <SelectItem value="4">Jueves</SelectItem>
+                                <SelectItem value="5">Viernes</SelectItem>
+                                <SelectItem value="6">Sábados</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 {/* Matrix */}
@@ -241,10 +275,16 @@ export default function MinistrySchedulePage() {
                                                                 </AvatarFallback>
                                                                 {/* Assuming person has avatarUrl if available */}
                                                             </Avatar>
-                                                            <div className="flex flex-col overflow-hidden">
+                                                            <div className="flex flex-col overflow-hidden flex-1">
                                                                 <span className="text-sm font-semibold text-indigo-900 truncate w-full">
                                                                     {assignment.person?.firstName}
                                                                 </span>
+                                                            </div>
+                                                            <div
+                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-100 rounded-full text-red-400 hover:text-red-600"
+                                                                onClick={(e) => handleQuickDelete(assignment.id, e)}
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
                                                             </div>
                                                         </>
                                                     ) : (
@@ -290,18 +330,18 @@ export default function MinistrySchedulePage() {
                                             <div className="space-y-2">
                                                 <Label className="text-xs text-indigo-900">Tema / Título</Label>
                                                 <Input
-                                                    id="meta-title"
+                                                    value={metaTitle}
+                                                    onChange={(e) => setMetaTitle(e.target.value)}
                                                     placeholder="Ej: La Fe que Mueve Montañas"
-                                                    defaultValue={selectedCell?.currentAssignment?.metadata?.title || ''}
                                                     className="bg-white"
                                                 />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-xs text-indigo-900">Pasaje Bíblico</Label>
                                                 <Input
-                                                    id="meta-passage"
+                                                    value={metaPassage}
+                                                    onChange={(e) => setMetaPassage(e.target.value)}
                                                     placeholder="Ej: Hebreos 11:1-6"
-                                                    defaultValue={selectedCell?.currentAssignment?.metadata?.passage || ''}
                                                     className="bg-white"
                                                 />
                                             </div>
@@ -313,9 +353,9 @@ export default function MinistrySchedulePage() {
                                             <div className="space-y-2">
                                                 <Label className="text-xs text-amber-900">Lista de Anuncios</Label>
                                                 <textarea
-                                                    id="meta-announcements"
+                                                    value={metaAnnouncements}
+                                                    onChange={(e) => setMetaAnnouncements(e.target.value)}
                                                     placeholder="Ej:&#10;- Retiro de Jóvenes ($5000)&#10;- Reunión de Mujeres (Jueves 19hs)"
-                                                    defaultValue={selectedCell?.currentAssignment?.metadata?.title || ''}
                                                     className="w-full bg-white min-h-[120px] p-3 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                                                 />
                                                 <p className="text-[10px] text-amber-700/70">
@@ -382,6 +422,21 @@ export default function MinistrySchedulePage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={!!assignmentToDelete} onOpenChange={(open) => !open && setAssignmentToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Quitar rol asignado?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción eliminará la asignación de este servidor para la fecha seleccionada.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </PageContainer>
     );
 }

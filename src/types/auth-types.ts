@@ -19,11 +19,15 @@ export enum SubscriptionStatus {
 }
 
 export enum MembershipStatus {
+    INVITED = 'INVITED',
+    VISITOR = 'VISITOR',
+    PROSPECT = 'PROSPECT',
     MEMBER = 'MEMBER',
     CHILD = 'CHILD',
     DISCIPLINED = 'DISCIPLINED',
     EXCOMMUNICATED = 'EXCOMMUNICATED',
-    INACTIVE = 'INACTIVE'
+    INACTIVE = 'INACTIVE',
+    ARCHIVED = 'ARCHIVED'
 }
 
 export enum FollowUpStatus {
@@ -78,7 +82,9 @@ export enum SmallGroupRole {
 export enum FamilyRole {
     FATHER = 'FATHER',
     MOTHER = 'MOTHER',
-    CHILD = 'CHILD'
+    CHILD = 'CHILD',
+    SPOUSE = 'SPOUSE',
+    MEMBER = 'MEMBER'
 }
 
 // Interfaces

@@ -47,7 +47,7 @@ export function Sidebar() {
         return roles.some(role => user.roles?.includes(role));
     };
 
-    const menuGroups = [
+    const menuGroups: { label: string; items: any[] }[] = [
         {
             label: 'Principal',
             items: [
@@ -56,39 +56,21 @@ export function Sidebar() {
             ]
         },
         {
-            label: 'Personas',
-            items: [
-                { name: 'Miembros', href: '/members', icon: Users },
-                { name: 'Visitantes', href: '/visitors', icon: UserPlus },
-                { name: 'Invitados', href: '/invited', icon: HeartHandshake }, // Using HeartHandshake as placeholder or similar
-            ]
-        },
-        {
             label: 'Gestión',
             items: [
+                { name: 'Miembros', href: '/members', icon: Users },
                 { name: 'Cultos', href: '/worship', icon: Music },
-                { name: 'Actividades', href: '/activities', icon: Map },
-                { name: 'Grupos Pequeños', href: '/groups', icon: Users },
                 { name: 'Ministerios', href: '/ministries', icon: Users },
                 { name: 'Familias', href: '/families', icon: Users },
-                { name: 'Discipulados', href: '/discipleship', icon: GraduationCap },
-                { name: 'Cursos', href: '/courses', icon: BookOpen },
-            ]
+                { name: 'Comunidad', href: '/community', icon: Users },
+            ].filter((item: any) => item.show ?? true)
         },
         {
             label: 'Cuidado',
             items: [
                 { name: 'Acompañamiento', href: '/counseling', icon: HeartHandshake, show: hasRole(['ADMIN_CHURCH', 'COUNSELOR', 'PASTOR']) },
-                { name: 'Seguimiento', href: '/follow-ups', icon: UserPlus }, // Keep legacy or remove? User asked for 'Personas'. "Seguimiento" module might be different from "Visitantes" list. Use 'follow-ups' as logic but 'visitors' as view?
-                // User said "que dividas el sidebar... quiero que miembros lo pongamos en otra categoria de personas junto con visitantes y invitados"
-                // "Seguimiento" (FollowUps) IS basically Visitors management in many systems. 
-                // But user asked for specific "Visitantes" view. 
-                // Let's keep "Seguimiento" in 'Cuidado' if it implies a process, but 'Visitantes' is the list.
-                // Actually, 'FollowUps' module usually maps to visitors. 
-                // Let's assume /visitors is the new page for listing visitors. 
-                // Should I remove 'Seguimiento' from Cuidado? 
-                // "FollowUps" is likely the process/funnel. "Visitantes" is the person list.
-                // Reuse icons.
+                { name: 'Discipulados', href: '/discipleship', icon: GraduationCap },
+                // { name: 'Seguimiento', href: '/followups', icon: UserPlus }, // Removed per user request
                 { name: 'Muro de Oración', href: '/prayers', icon: HeartHandshake },
             ]
         },
@@ -97,7 +79,18 @@ export function Sidebar() {
             items: [
                 { name: 'Biblioteca', href: '/library', icon: Book },
                 { name: 'Inventario', href: '/inventory', icon: Package },
-                { name: 'Tesorería', href: '/treasury', icon: Wallet, show: hasRole(['TREASURER', 'ADMIN_CHURCH', 'AUDITOR', 'ADMIN_APP']) },
+                {
+                    name: 'Tesorería',
+                    href: '/treasury',
+                    icon: Wallet,
+                    show: hasRole(['TREASURER', 'ADMIN_CHURCH', 'AUDITOR', 'ADMIN_APP']),
+                    subItems: [
+                        { name: 'Transacciones', href: '/treasury' },
+                        { name: 'Cuentas', href: '/treasury/accounts' },
+                        { name: 'Reportes', href: '/treasury/reports' },
+                        { name: 'Presupuestos', href: '/treasury/budgets' },
+                    ]
+                },
             ].filter(item => item.show ?? true)
         },
         {

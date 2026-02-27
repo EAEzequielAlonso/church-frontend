@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Plus, Search, Filter, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -11,6 +13,7 @@ import { MemberActionsMenu } from './member-actions-menu';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ROLE_UI_METADATA } from '@/constants/role-ui';
 import { FunctionalRole, SystemRole } from '@/types/auth-types';
+import api from '@/lib/api';
 
 export default function MembersPage() {
     const { churchId, user } = useAuth();
@@ -20,6 +23,7 @@ export default function MembersPage() {
     const canManage = user?.systemRole === SystemRole.ADMIN_APP ||
         user?.roles?.includes(FunctionalRole.ADMIN_CHURCH) ||
         user?.roles?.includes(FunctionalRole.AUDITOR);
+    const [showArchived, setShowArchived] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -28,16 +32,16 @@ export default function MembersPage() {
     const fetchMembers = async () => {
         if (!churchId) return;
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003'}/members`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setMembers(data);
-            }
+            // Updated Logic:
+            // If showArchived: fetch ?status=ARCHIVED
+            // If !showArchived: fetch all and filter out ARCHIVED on client? Or ask backend for != ARCHIVED?
+            // Backend `findAll` with `status` does exact match.
+            // For now, let's fetch ALL and filter in client to avoid complex backend changes for "NOT equal".
+            const res = await api.get('/members');
+            setMembers(res.data);
         } catch (error) {
             console.error('Failed to fetch members', error);
+            // Optionally toast.error("Error cargando miembros")
         } finally {
             setLoading(false);
         }
@@ -47,10 +51,15 @@ export default function MembersPage() {
         fetchMembers();
     }, [churchId]);
 
-    const filteredMembers = members.filter(m =>
-        m.person?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.person?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredMembers = members.filter(m => {
+        const matchesSearch = m.person?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            m.person?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const isArchived = m.membershipStatus === 'ARCHIVED';
+        const matchesStatus = showArchived ? isArchived : !isArchived;
+
+        return matchesSearch && matchesStatus;
+    });
 
     const paginatedMembers = filteredMembers.slice(
         (currentPage - 1) * rowsPerPage,
@@ -81,14 +90,24 @@ export default function MembersPage() {
                         <Input
                             placeholder="Buscar por nombre o email..."
                             className="pl-10"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
                         />
                     </div>
-                    <Button variant="outline" className="flex items-center gap-2">
-                        <Filter className="w-4 h-4" />
-                        Filtros
-                    </Button>
+                    <div className="flex items-center space-x-2 border rounded-md px-3 py-2 bg-slate-50">
+                        <Switch
+                            id="archive-mode"
+                            onCheckedChange={(checked) => {
+                                setShowArchived(checked);
+                                setCurrentPage(1);
+                            }}
+                        />
+                        <Label htmlFor="archive-mode" className="text-sm font-medium text-slate-700 cursor-pointer">
+                            Ver Archivados
+                        </Label>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -158,13 +177,13 @@ export default function MembersPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {member.status && ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA] ? (
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA].color}`}>
-                                                    {ROLE_UI_METADATA[member.status as keyof typeof ROLE_UI_METADATA].label}
+                                            {member.membershipStatus && ROLE_UI_METADATA[member.membershipStatus as keyof typeof ROLE_UI_METADATA] ? (
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ROLE_UI_METADATA[member.membershipStatus as keyof typeof ROLE_UI_METADATA].color}`}>
+                                                    {ROLE_UI_METADATA[member.membershipStatus as keyof typeof ROLE_UI_METADATA].label}
                                                 </span>
                                             ) : (
                                                 <span className="bg-gray-100 text-gray-800 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                                                    {member.status}
+                                                    {member.membershipStatus || '-'}
                                                 </span>
                                             )}
                                         </td>

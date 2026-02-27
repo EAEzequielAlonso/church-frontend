@@ -21,6 +21,21 @@ export const ROLE_UI_METADATA = {
         description: 'Usuario estándar del sistema.'
     },
     // Membership Status
+    [MembershipStatus.INVITED]: {
+        label: 'Invitado',
+        color: 'bg-indigo-100 text-indigo-700',
+        description: 'Persona invitada por primera vez.'
+    },
+    [MembershipStatus.VISITOR]: {
+        label: 'Visitante Regular',
+        color: 'bg-blue-100 text-blue-700',
+        description: 'Persona que asiste de forma regular.'
+    },
+    [MembershipStatus.PROSPECT]: {
+        label: 'Candidato a Miembro',
+        color: 'bg-purple-100 text-purple-700',
+        description: 'En proceso para ser miembro oficial.'
+    },
     [MembershipStatus.MEMBER]: {
         label: 'Miembro',
         color: 'bg-green-100 text-green-700',
@@ -40,6 +55,16 @@ export const ROLE_UI_METADATA = {
         label: 'Inactivo',
         color: 'bg-gray-200 text-gray-500',
         description: 'Miembro histórico o que se ha mudado.'
+    },
+    [MembershipStatus.ARCHIVED]: {
+        label: 'Archivado',
+        color: 'bg-stone-200 text-stone-500',
+        description: 'Registro archivado del sistema.'
+    },
+    [MembershipStatus.CHILD]: {
+        label: 'Hijo de Miembro',
+        color: 'bg-orange-100 text-orange-700',
+        description: 'Hijo menor de edad de un miembro.'
     },
     // Ecclesiastical Roles
     [EcclesiasticalRole.PASTOR]: {
@@ -63,7 +88,7 @@ export const ROLE_UI_METADATA = {
         description: 'Servidor ordenado para asistencia práctica.'
     },
     [EcclesiasticalRole.NONE]: {
-        label: 'Miembro',
+        label: 'Sin Rol',
         color: 'bg-slate-100 text-slate-500',
         description: 'Miembro sin rol eclesiástico específico.'
     },
@@ -139,26 +164,11 @@ export const ROLE_UI_METADATA = {
         color: 'bg-pink-50 text-pink-600',
         description: 'Madre de familia.'
     },
-    [FamilyRole.CHILD]: {
-        label: 'Hijo/a',
-        color: 'bg-green-50 text-green-600',
-        description: 'Hijo o hija en el núcleo familiar.'
+    [FamilyRole.SPOUSE]: {
+        label: 'Esposo/a',
+        color: 'bg-purple-50 text-purple-600',
+        description: 'Cónyuge.'
     },
 
-    // FollowUp Statuses
-    [FollowUpStatus.VISITOR]: {
-        label: 'Visitante',
-        color: 'bg-blue-100 text-blue-700',
-        description: 'Visitante frecuente de la iglesia.'
-    },
-    [FollowUpStatus.PROSPECT]: {
-        label: 'Candidato a Miembro',
-        color: 'bg-purple-100 text-purple-700',
-        description: 'Listo para iniciar proceso de membresía.'
-    },
-    [FollowUpStatus.ARCHIVED]: {
-        label: 'Archivado',
-        color: 'bg-gray-100 text-gray-500',
-        description: 'Registro archivado.'
-    }
+
 };

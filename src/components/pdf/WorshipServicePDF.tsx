@@ -186,6 +186,27 @@ export const WorshipServicePDF: React.FC<WorshipServicePDFProps> = ({ service })
                                         <Text style={styles.content}>{announcements.metadata.title}</Text>
                                     </View>
                                 )}
+                                {/* Render Metadata from Roles (Sermon Title, Passage, etc.) here */}
+                                {timelineRoles.map((role: any, rIdx: number) => {
+                                    if (!role.metadata?.title && !role.metadata?.passage) return null;
+                                    // Skip announcements as they are handled above
+                                    if (role.role.behaviorType === 'ANNOUNCEMENTS') return null;
+
+                                    return (
+                                        <View key={`meta-${rIdx}`} style={{ marginTop: 4 }}>
+                                            {role.metadata.title && (
+                                                <Text style={{ fontSize: 10, fontStyle: 'italic', color: '#334155', fontWeight: 'medium' }}>
+                                                    "{role.metadata.title}"
+                                                </Text>
+                                            )}
+                                            {role.metadata.passage && (
+                                                <Text style={{ fontSize: 9, color: '#64748B', marginTop: 1 }}>
+                                                    {role.metadata.passage}
+                                                </Text>
+                                            )}
+                                        </View>
+                                    );
+                                })}
                             </View>
 
                             <View style={styles.rolesCol}>
@@ -196,14 +217,6 @@ export const WorshipServicePDF: React.FC<WorshipServicePDFProps> = ({ service })
                                             <Text style={styles.personName}>
                                                 {role.assignedPerson ? `${role.assignedPerson.firstName} ${role.assignedPerson.lastName}` : 'Sin asignar'}
                                             </Text>
-                                            {role.metadata?.title && role.role.behaviorType === 'SPEAKER' && (
-                                                <Text style={{ fontSize: 9, fontStyle: 'italic', color: '#64748B' }}>"{role.metadata.title}"</Text>
-                                            )}
-                                            {role.metadata?.passage && (
-                                                <Text style={{ fontSize: 8, color: '#444', marginTop: 1, fontStyle: 'italic' }}>
-                                                    Lectura: {role.metadata.passage}
-                                                </Text>
-                                            )}
                                         </View>
                                     ))
                                 ) : (

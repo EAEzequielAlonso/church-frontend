@@ -29,9 +29,14 @@ export function DeleteMemberAlert({ isOpen, onClose, member, onSuccess }: Delete
             toast.success("Miembro eliminado correctamente");
             onSuccess();
             onClose();
-        } catch (error) {
-            console.error(error);
-            toast.error("Error al eliminar el miembro");
+        } catch (error: any) {
+            // Only log unexpected errors
+            if (error.response?.status !== 409) {
+                console.error(error);
+            }
+
+            const message = error.response?.data?.message || "Error al eliminar el miembro";
+            toast.error(message);
         } finally {
             setLoading(false);
         }

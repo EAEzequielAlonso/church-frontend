@@ -18,11 +18,15 @@ interface CreateEventDialogProps {
     eventToEdit?: CalendarEvent;
 }
 
-export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId, trigger, eventToEdit }: CreateEventDialogProps) {
+export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId, trigger, eventToEdit, open: controlledOpen, onOpenChange: setControlledOpen }: CreateEventDialogProps & { open?: boolean; onOpenChange?: (open: boolean) => void }) {
     const isEditing = !!eventToEdit;
     const { user } = useAuth();
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    const isControlled = controlledOpen !== undefined && setControlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const setOpen = isControlled ? setControlledOpen : setInternalOpen;
 
     // Separate local state for simplified inputs
     const [dateInput, setDateInput] = useState('');
@@ -52,16 +56,21 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
                     color: eventToEdit.color || '#3b82f6',
                     isAllDay: eventToEdit.isAllDay,
                 });
-                const start = new Date(eventToEdit.startDate);
-                const end = new Date(eventToEdit.endDate);
-                setDateInput(start.toISOString().split('T')[0]);
-                setTimeInput(start.toTimeString().slice(0, 5));
+                // Check if startDate is valid 
+                if (eventToEdit.startDate) {
+                    const start = new Date(eventToEdit.startDate);
+                    const end = new Date(eventToEdit.endDate);
+                    if (!isNaN(start.getTime())) {
+                        setDateInput(start.toISOString().split('T')[0]);
+                        setTimeInput(start.toTimeString().slice(0, 5));
 
-                // Calculate duration
-                const diffMs = end.getTime() - start.getTime();
-                const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                setDurationInput(`${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}`);
+                        // Calculate duration
+                        const diffMs = end.getTime() - start.getTime();
+                        const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                        setDurationInput(`${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}`);
+                    }
+                }
             } else {
                 setFormData(prev => ({
                     ...prev,
@@ -72,6 +81,9 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
                     ministryId: defaultType === CalendarEventType.MINISTRY ? defaultEntityId : prev.ministryId,
                     smallGroupId: defaultType === CalendarEventType.SMALL_GROUP ? defaultEntityId : prev.smallGroupId
                 }));
+                // Reset date inputs if needed or keep them empty
+                setDateInput('');
+                setTimeInput('');
             }
         }
     }, [open, defaultType, defaultEntityId, eventToEdit]);
@@ -124,14 +136,16 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
             toast.success(`Evento ${isEditing ? 'editado' : 'creado'} exitosamente`);
             setOpen(false);
             // Reset minimal
-            setFormData(prev => ({
-                ...prev,
-                title: '',
-                description: '',
-                location: '',
-            }));
-            setDateInput('');
-            setTimeInput('');
+            if (!isEditing) {
+                setFormData(prev => ({
+                    ...prev,
+                    title: '',
+                    description: '',
+                    location: '',
+                }));
+                setDateInput('');
+                setTimeInput('');
+            }
             onEventCreated();
         } catch (error: any) {
             console.error(error);
@@ -174,7 +188,19 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
                         <div className="space-y-2">
                             <Label>Tipo</Label>
                             {defaultType ? (
-                                <Input disabled value={defaultType} className="bg-slate-100 font-mono text-xs" />
+                                <>
+                                    <Input
+                                        disabled
+                                        value={
+                                            defaultType === CalendarEventType.MINISTRY ? 'Ministerio' :
+                                                defaultType === CalendarEventType.SMALL_GROUP ? 'Grupo Pequeño' :
+                                                    defaultType === CalendarEventType.CHURCH ? 'Iglesia' : 'Personal'
+                                        }
+                                        className="bg-slate-100 font-bold text-slate-500"
+                                    />
+                                    {/* Hidden input to keep value in form */}
+                                    <input type="hidden" value={defaultType} />
+                                </>
                             ) : (
                                 <Select
                                     value={formData.type}

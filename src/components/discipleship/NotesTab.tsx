@@ -170,7 +170,7 @@ export default function NotesTab({ discipleship, refresh, myRole, userId }: any)
                     <form onSubmit={handleSubmit(onAddNote)} className="space-y-4">
                         <div className="space-y-2">
                             <Label>Encuentro Relacionado (Opcional)</Label>
-                            <Select onValueChange={(val) => setValue('meetingId', val === 'none' ? null : val)}>
+                            <Select onValueChange={(val) => setValue('meetingId', (val === 'none' ? null : val) as any)}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Sin asociar a encuentro" />
                                 </SelectTrigger>

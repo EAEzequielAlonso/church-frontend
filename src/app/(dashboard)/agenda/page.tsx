@@ -122,7 +122,10 @@ export default function AgendaPage() {
                 </div>
 
                 <div className="flex items-center gap-3 self-start md:self-auto">
-                    <CreateEventDialog onEventCreated={fetchAgenda} />
+                    <CreateEventDialog
+                        onEventCreated={fetchAgenda}
+                        defaultType={CalendarEventType.PERSONAL}
+                    />
 
                     <div className="flex bg-slate-100 p-1 rounded-xl shadow-inner border border-slate-200">
                         <Button
@@ -173,45 +176,51 @@ export default function AgendaPage() {
                                             : (endDate ? `${format(startDate!, "HH:mm")} - ${format(endDate, "HH:mm")}` : format(startDate!, "HH:mm"));
 
                                         return (
-                                            <Card key={`event-${event.id}`} className="group hover:border-indigo-400/40 transition-all shadow-sm border-slate-200/60 overflow-hidden">
-                                                <CardContent className="p-0 flex">
-                                                    <div
-                                                        className="w-2 transition-all group-hover:w-3"
-                                                        style={{ backgroundColor: event.color || '#6366f1' }}
-                                                    ></div>
-                                                    <div className="p-4 flex-grow">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="text-xs font-black text-slate-900 uppercase">
-                                                                {format(startDate!, "EEEE d 'de' MMMM", { locale: es })}
-                                                            </span>
-                                                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-slate-200 text-slate-500 font-medium">
-                                                                {getEventLabel(event.type)}
-                                                            </Badge>
-                                                        </div>
-                                                        <h3 className="text-lg font-bold text-slate-800">{event.title}</h3>
-                                                        {event.description && <p className="text-sm text-slate-500 mt-1 line-clamp-1">{event.description}</p>}
-
-                                                        <div className="flex flex-wrap gap-3 mt-2">
-                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                                                                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                                                {timeDisplay}
-                                                            </div>
-                                                            {event.location && (
-                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                                                                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                                                    {event.location}
-                                                                </div>
-                                                            )}
-                                                            {event.discipleship && (
-                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                                                                    <Flag className="w-3.5 h-3.5 text-slate-400" />
-                                                                    {event.discipleship.name}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                            <div key={`event-${event.id}`} className="flex gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                                                <div className="flex flex-col items-center justify-center bg-slate-50 border rounded-lg p-2 min-w-[70px] h-[70px] self-start">
+                                                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                                                        {format(startDate!, 'EEE', { locale: es })}
+                                                    </span>
+                                                    <span className="text-2xl font-black text-slate-800">
+                                                        {format(startDate!, 'dd')}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-grow">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h3 className="font-bold text-slate-900 text-lg leading-tight group-hover:text-primary transition-colors">
+                                                            {event.title}
+                                                        </h3>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider ${event.color ? 'text-white' : 'bg-slate-100 text-slate-600'}`} style={event.color ? { backgroundColor: event.color } : {}}>
+                                                            {getEventLabel(event.type)}
+                                                        </span>
                                                     </div>
-                                                </CardContent>
-                                            </Card>
+
+                                                    {event.description && (
+                                                        <p className="text-sm text-slate-500 mb-2 line-clamp-2">
+                                                            {event.description}
+                                                        </p>
+                                                    )}
+
+                                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                                                        <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                                            {timeDisplay}
+                                                        </div>
+                                                        {event.location && (
+                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                                                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                                                                {event.location}
+                                                            </div>
+                                                        )}
+                                                        {event.discipleship && (
+                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                                                <Flag className="w-3.5 h-3.5 text-slate-400" />
+                                                                {event.discipleship.name}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         );
                                     } else if (item.derivedType === 'SESSION') {
                                         const session = item;

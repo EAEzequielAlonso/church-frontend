@@ -36,7 +36,7 @@ export function UpdateMemberDialog({ isOpen, onClose, member, onSuccess }: Updat
         if (member) {
             setRole(member.ecclesiasticalRole || EcclesiasticalRole.NONE);
             setFunctionalRoles(member.functionalRoles || []);
-            setStatus(member.status || MembershipStatus.MEMBER);
+            setStatus(member.membershipStatus || MembershipStatus.MEMBER);
             setFullName(member.person?.fullName || '');
             setEmail(member.person?.email || '');
             setPhoneNumber(member.person?.phoneNumber || '');
