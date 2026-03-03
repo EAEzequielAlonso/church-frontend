@@ -126,7 +126,8 @@ export function GroupCard({
                         </Button>
                     )
                 ) : (
-                    onJoin && (
+                    // Only show join button for PUBLIC groups
+                    group.visibility === 'PUBLIC' && onJoin && (
                         <Button
                             className={`w-full sm:w-1/2 ${config.color.replace('text-', 'bg-')} text-white hover:opacity-90`}
                             onClick={() => onJoin(group.id)}

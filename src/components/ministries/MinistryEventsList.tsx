@@ -25,8 +25,9 @@ export function MinistryEventsList({ ministryId, open, onOpenChange }: MinistryE
 
     // New Event Form
     const [newEvent, setNewEvent] = useState({
-        date: format(new Date(), 'yyyy-MM-dd'),
-        type: 'PREACHING',
+        startDate: format(new Date(), "yyyy-MM-dd'T'10:00"),
+        endDate: format(new Date(), "yyyy-MM-dd'T'11:00"),
+        type: 'MINISTRY', // Instead of PREACHING
         title: '',
         description: ''
     });
@@ -46,15 +47,15 @@ export function MinistryEventsList({ ministryId, open, onOpenChange }: MinistryE
                 startDate: start.toISOString(),
                 endDate: end.toISOString()
             });
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ministries/events?${query}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ministries/${ministryId}/events?${query}`, {
                 headers: { Authorization: `Bearer ${token}`, 'x-church-id': churchId }
             });
             if (res.ok) {
                 const data = await res.json();
-                // Filter client-side by ministryId because endpoint returns ALL church events in range
-                const ministryEvents = data.filter((e: any) => e.ministry.id === ministryId);
+                // Filter client-side by ownerId since we removed explicit ministry relations
+                const ministryEvents = data.filter((e: any) => e.ownerId === ministryId || e.ministry?.id === ministryId);
                 // Sort ascending
-                ministryEvents.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                ministryEvents.sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
                 setEvents(ministryEvents);
             }
         } catch (error) {
@@ -85,7 +86,7 @@ export function MinistryEventsList({ ministryId, open, onOpenChange }: MinistryE
             toast.success('Evento creado');
             setIsCreateOpen(false);
             fetchEvents();
-            setNewEvent({ date: format(new Date(), 'yyyy-MM-dd'), type: 'PREACHING', title: '', description: '' });
+            setNewEvent({ startDate: format(new Date(), "yyyy-MM-dd'T'10:00"), endDate: format(new Date(), "yyyy-MM-dd'T'11:00"), type: 'MINISTRY', title: '', description: '' });
         } catch (err) {
             toast.error('Error al crear evento');
         }
@@ -93,7 +94,8 @@ export function MinistryEventsList({ ministryId, open, onOpenChange }: MinistryE
 
     // Grouping Logic
     const groupedEvents = events.reduce((acc: any, event: any) => {
-        const monthKey = format(parseISO(event.date), 'MMMM yyyy', { locale: es });
+        const eventDate = event.startDate || event.date; // fallback
+        const monthKey = format(parseISO(eventDate), 'MMMM yyyy', { locale: es });
         if (!acc[monthKey]) acc[monthKey] = [];
         acc[monthKey].push(event);
         return acc;
@@ -123,10 +125,10 @@ export function MinistryEventsList({ ministryId, open, onOpenChange }: MinistryE
                                     <div key={event.id} className="flex gap-4 p-3 bg-slate-50 rounded-lg border">
                                         <div className="flex flex-col items-center justify-center bg-white border rounded p-2 min-w-[60px] h-[60px]">
                                             <span className="text-xs uppercase text-gray-500">
-                                                {format(parseISO(event.date), 'EEE', { locale: es })}
+                                                {format(parseISO(event.startDate || event.date), 'EEE', { locale: es })}
                                             </span>
                                             <span className="text-xl font-bold">
-                                                {format(parseISO(event.date), 'dd')}
+                                                {format(parseISO(event.startDate || event.date), 'dd')}
                                             </span>
                                         </div>
                                         <div>
@@ -159,11 +161,11 @@ export function MinistryEventsList({ ministryId, open, onOpenChange }: MinistryE
                         <form onSubmit={handleCreateEvent} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Fecha</Label>
+                                    <Label>Fecha y Hora</Label>
                                     <Input
-                                        type="date"
-                                        value={newEvent.date}
-                                        onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                                        type="datetime-local"
+                                        value={newEvent.startDate}
+                                        onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value, endDate: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -172,15 +174,13 @@ export function MinistryEventsList({ ministryId, open, onOpenChange }: MinistryE
                                     <Select
                                         value={newEvent.type}
                                         onValueChange={(val) => setNewEvent({ ...newEvent, type: val })}
+                                        disabled
                                     >
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="PREACHING">Predicación</SelectItem>
-                                            <SelectItem value="WORSHIP">Alabanza</SelectItem>
-                                            <SelectItem value="MEETING">Reunión</SelectItem>
-                                            <SelectItem value="OTHER">Otro</SelectItem>
+                                            <SelectItem value="MINISTRY">Ministerio</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

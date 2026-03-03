@@ -84,8 +84,13 @@ export function AddFamilyMemberDialog({
                                     value={searchQuery}
                                     onChange={(e) => handleSearch(e.target.value)}
                                 />
-                                {results.length > 0 && (
+                                {results.filter(r => !currentMemberIds.includes(r.id)).length > 0 && (
                                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                        {!searchQuery && (
+                                            <div className="px-2 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 bg-slate-50 border-b">
+                                                Sugerencias
+                                            </div>
+                                        )}
                                         {results
                                             .filter(r => !currentMemberIds.includes(r.id))
                                             .map(r => (

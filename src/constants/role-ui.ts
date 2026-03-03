@@ -123,6 +123,11 @@ export const ROLE_UI_METADATA = {
         color: 'bg-amber-500 text-white shadow-sm',
         description: 'Gestión de biblioteca.'
     },
+    [FunctionalRole.DISCIPLER]: {
+        label: 'Discipulador',
+        color: 'bg-cyan-500 text-white shadow-sm',
+        description: 'Autorizado a iniciar procesos formales de discipulado.'
+    },
     // FunctionalRole.MEMBER duplicates MembershipStatus.MEMBER - removed
 
     // Ministry Roles

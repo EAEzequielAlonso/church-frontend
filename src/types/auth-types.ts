@@ -51,6 +51,7 @@ export enum FunctionalRole {
     COUNSELOR = 'COUNSELOR',
     MINISTRY_LEADER = 'MINISTRY_LEADER',
     LIBRARIAN = 'LIBRARIAN',
+    DISCIPLER = 'DISCIPLER',
     MEMBER = 'MEMBER'
 }
 

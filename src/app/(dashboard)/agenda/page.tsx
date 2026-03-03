@@ -88,9 +88,12 @@ export default function AgendaPage() {
             'MINISTRY': 'Ministerio',
             'CHURCH': 'Iglesia',
             'PERSONAL': 'Personal',
+            'COUNSELING': 'Consejería',
+            'DISCIPLESHIP': 'Discipulado',
+            'FOLLOW_UP': 'Seguimiento',
+            'COURSE': 'Curso',
+            'ACTIVITY': 'Actividad',
             'OTHER': 'Otro',
-            'COUNSELING': 'Acompañamiento',
-            'DISCIPLESHIP': 'Discipulado'
         };
         return labels[type] || type;
     };
@@ -99,6 +102,49 @@ export default function AgendaPage() {
     const hasMore = visibleCount < allActivities.length;
 
     const loadMore = () => setVisibleCount(prev => prev + 5);
+
+    // Calculate current month statistics
+    const startOfCurrentMonth = startOfMonth(new Date());
+    const endOfCurrentMonth = endOfMonth(new Date());
+
+    const isCurrentMonth = (dateStr: string | Date | undefined) => {
+        const d = safeDate(dateStr);
+        return d && d >= startOfCurrentMonth && d <= endOfCurrentMonth;
+    };
+
+    const currentMonthStats = {
+        sessions: agenda.sessions.filter(s => isCurrentMonth(s.date)).length,
+        tasks: agenda.tasks.filter(t => isCurrentMonth(t.date)).length,
+        events: agenda.events.filter(e => isCurrentMonth(e.startDate)),
+    };
+
+    const eventCounts: Record<string, number> = {
+        'SMALL_GROUP': 0, 'MINISTRY': 0, 'DISCIPLESHIP': 0,
+        'COUNSELING': 0, 'FOLLOW_UP': 0, 'COURSE': 0,
+        'ACTIVITY': 0, 'PERSONAL': 0, 'CHURCH': 0, 'OTHER': 0
+    };
+
+    currentMonthStats.events.forEach(e => {
+        if (eventCounts[e.type] !== undefined) {
+            eventCounts[e.type]++;
+        } else {
+            eventCounts['OTHER']++;
+        }
+    });
+
+    const summaryItems = [
+        { label: 'Citas', count: currentMonthStats.sessions, color: 'text-indigo-600', bg: 'bg-indigo-50/50 hover:bg-indigo-100/50' },
+        { label: 'Tareas', count: currentMonthStats.tasks, color: 'text-amber-600', bg: 'bg-amber-50/50 hover:bg-amber-100/50' },
+        { label: 'Grupos', count: eventCounts['SMALL_GROUP'], color: 'text-emerald-600', bg: 'bg-emerald-50/50 hover:bg-emerald-100/50' },
+        { label: 'Ministerios', count: eventCounts['MINISTRY'], color: 'text-blue-600', bg: 'bg-blue-50/50 hover:bg-blue-100/50' },
+        { label: 'Discipulado', count: eventCounts['DISCIPLESHIP'], color: 'text-purple-600', bg: 'bg-purple-50/50 hover:bg-purple-100/50' },
+        { label: 'Consejería', count: eventCounts['COUNSELING'], color: 'text-rose-600', bg: 'bg-rose-50/50 hover:bg-rose-100/50' },
+        { label: 'Seguimiento', count: eventCounts['FOLLOW_UP'], color: 'text-cyan-600', bg: 'bg-cyan-50/50 hover:bg-cyan-100/50' },
+        { label: 'Cursos', count: eventCounts['COURSE'], color: 'text-orange-600', bg: 'bg-orange-50/50 hover:bg-orange-100/50' },
+        { label: 'Actividades', count: eventCounts['ACTIVITY'], color: 'text-teal-600', bg: 'bg-teal-50/50 hover:bg-teal-100/50' },
+        { label: 'Iglesia', count: eventCounts['CHURCH'], color: 'text-red-600', bg: 'bg-red-50/50 hover:bg-red-100/50' },
+        { label: 'Personales', count: eventCounts['PERSONAL'], color: 'text-slate-600', bg: 'bg-slate-100/50 hover:bg-slate-200/50' },
+    ];
 
     if (isLoading) {
         return (
@@ -144,7 +190,7 @@ export default function AgendaPage() {
                             onClick={() => setViewMode('CALENDAR')}
                         >
                             <LayoutGrid className="w-3.5 h-3.5 mr-1.5" />
-                            CALEND
+                            CALENDARIO
                         </Button>
                     </div>
                 </div>
@@ -212,12 +258,7 @@ export default function AgendaPage() {
                                                                 {event.location}
                                                             </div>
                                                         )}
-                                                        {event.discipleship && (
-                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                                                                <Flag className="w-3.5 h-3.5 text-slate-400" />
-                                                                {event.discipleship.name}
-                                                            </div>
-                                                        )}
+
                                                     </div>
                                                 </div>
                                             </div>
@@ -235,7 +276,7 @@ export default function AgendaPage() {
                                                                 <span className="text-sm font-black text-slate-900 uppercase">
                                                                     {format(sessionDate!, "EEEE d 'de' MMMM", { locale: es })}
                                                                 </span>
-                                                                <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-slate-200 text-slate-500 font-medium">ACOMPAÑAMIENTO</Badge>
+
                                                             </div>
                                                             <h3 className="text-lg font-bold text-slate-800 group-hover:text-primary transition-colors">{session.motive}</h3>
                                                             <div className="flex flex-wrap gap-3 mt-1">
@@ -252,7 +293,7 @@ export default function AgendaPage() {
                                                         <Button
                                                             variant="ghost"
                                                             className="h-10 px-4 font-bold text-primary hover:bg-primary/5 shrink-0"
-                                                            onClick={() => router.push(`/counseling/${session.processId}`)}
+                                                            onClick={() => { }}
                                                         >
                                                             Ver Detalles
                                                             <ArrowRight className="w-4 h-4 ml-2" />
@@ -280,7 +321,7 @@ export default function AgendaPage() {
                                                             size="sm"
                                                             variant="outline"
                                                             className="h-7 text-[10px] font-extrabold border-slate-200 hover:bg-slate-50"
-                                                            onClick={() => router.push(`/counseling/${task.processId}?tab=TASKS`)}
+                                                            onClick={() => { }}
                                                         >
                                                             Responder
                                                         </Button>
@@ -310,41 +351,24 @@ export default function AgendaPage() {
                         )}
 
                     </div>
-
                     {/* SIDEBAR SUMMARY */}
                     <div className="space-y-4">
-                        <Card className="bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-none shadow-lg overflow-hidden relative">
-                            <div className="absolute top-0 right-0 p-1 opacity-10">
-                                <MessageSquare className="w-20 h-20 -mr-6 -mt-6" />
-                            </div>
-                            <CardContent className="p-4 relative z-10">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 mb-1">Resumen del Mes</p>
-                                <div className="flex items-center gap-4">
-                                    <div className="text-center">
-                                        <p className="text-2xl font-black">{agenda.sessions.length}</p>
-                                        <p className="text-[9px] font-bold opacity-60 uppercase">Citas</p>
-                                    </div>
-                                    <div className="w-px h-8 bg-white/20"></div>
-                                    <div className="text-center">
-                                        <p className="text-2xl font-black">{agenda.tasks.length}</p>
-                                        <p className="text-[9px] font-bold opacity-60 uppercase">Misiones</p>
-                                    </div>
-                                    <div className="w-px h-8 bg-white/20"></div>
-                                    <div className="text-center">
-                                        <p className="text-2xl font-black">{agenda.events.filter(e => e.type === 'SMALL_GROUP').length}</p>
-                                        <p className="text-[9px] font-bold opacity-60 uppercase">G.P</p>
-                                    </div>
+                        <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+                            <CardContent className="p-4 sm:p-5">
+                                <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-3">
+                                    <MessageSquare className="w-4 h-4 text-primary" />
+                                    <p className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                                        Resumen de {format(startOfCurrentMonth, 'MMMM', { locale: es })}
+                                    </p>
                                 </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Mini Calendar Hint */}
-                        <Card className="bg-slate-50 border-slate-200">
-                            <CardContent className="p-4 text-center">
-                                <p className="text-xs text-slate-500 mb-2">Para una vista mensual detallada, cambia a la vista de calendario.</p>
-                                <Button size="sm" variant="outline" onClick={() => setViewMode('CALENDAR')}>
-                                    Ver Calendario Completo
-                                </Button>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {summaryItems.map((item, idx) => (
+                                        <div key={idx} className={`p-2 rounded-xl border border-slate-100 flex flex-col justify-center items-center transition-colors ${item.bg}`}>
+                                            <p className={`text-lg font-black ${item.color}`}>{item.count}</p>
+                                            <p className="text-[8px] font-bold text-slate-500 uppercase text-center mt-1 leading-tight tracking-wider">{item.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
@@ -499,7 +523,7 @@ function CalendarView({ agenda, currentMonth, setCurrentMonth, router }: any) {
                                             <div
                                                 key={s.id}
                                                 className="p-1.5 px-2 rounded-lg bg-blue-600 text-white text-[9px] font-bold leading-tight cursor-pointer hover:bg-blue-700 transition-all shadow-sm hover:scale-[1.02] border border-blue-400/30 overflow-hidden"
-                                                onClick={() => router.push(`/counseling/${s.processId}`)}
+                                                onClick={() => { }}
                                                 title={s.motive}
                                             >
                                                 <div className="flex items-center gap-1 mb-0.5 opacity-80">
@@ -516,7 +540,7 @@ function CalendarView({ agenda, currentMonth, setCurrentMonth, router }: any) {
                                             <div
                                                 key={t.id}
                                                 className="p-1.5 px-2 rounded-lg bg-amber-500 text-white text-[9px] font-bold leading-tight cursor-pointer hover:bg-amber-600 transition-all shadow-sm hover:scale-[1.02] border border-amber-400/30 overflow-hidden"
-                                                onClick={() => router.push(`/counseling/${t.processId}?tab=TASKS`)}
+                                                onClick={() => { }}
                                                 title={t.title}
                                             >
                                                 <div className="flex items-center gap-1 mb-0.5 opacity-80">
@@ -542,7 +566,7 @@ function CalendarView({ agenda, currentMonth, setCurrentMonth, router }: any) {
                                                     <span>{e.isAllDay ? 'Todo el día' : format(d, "HH:mm")}</span>
                                                 </div>
                                                 <div className="truncate">
-                                                    {e.discipleship ? `🤝 ${e.title}` : e.title}
+                                                    {e.title}
                                                 </div>
                                             </div>
                                         )

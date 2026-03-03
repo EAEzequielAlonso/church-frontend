@@ -68,8 +68,7 @@ export function Sidebar() {
         {
             label: 'Cuidado',
             items: [
-                { name: 'Acompañamiento', href: '/counseling', icon: HeartHandshake, show: hasRole(['ADMIN_CHURCH', 'COUNSELOR', 'PASTOR']) },
-                { name: 'Discipulados', href: '/discipleship', icon: GraduationCap },
+                { name: 'Acompañamiento', href: '/mentorship', icon: HeartHandshake, show: hasRole(['ADMIN_CHURCH', 'COUNSELOR', 'PASTOR', 'DISCIPLER']) },
                 // { name: 'Seguimiento', href: '/followups', icon: UserPlus }, // Removed per user request
                 { name: 'Muro de Oración', href: '/prayers', icon: HeartHandshake },
             ]

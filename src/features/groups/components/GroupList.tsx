@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { useMyFamily } from '@/features/families/hooks/useMyFamily';
+import { JoinGroupDialog } from './JoinGroupDialog';
 
 interface GroupListProps {
     type: GroupType | 'ALL';
@@ -47,6 +49,10 @@ export function GroupList({ type }: GroupListProps) {
 
     const isAdminOrAuditor = user?.roles?.includes('ADMIN_CHURCH') || user?.roles?.includes('AUDITOR') || user?.systemRole === 'ADMIN_APP';
     const currentMemberId = user?.memberId;
+
+    const { family } = useMyFamily(currentMemberId);
+    const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+    const [selectedGroupIdToJoin, setSelectedGroupIdToJoin] = useState<string | null>(null);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingGroup, setEditingGroup] = useState<GroupDto | null>(null);
@@ -89,7 +95,13 @@ export function GroupList({ type }: GroupListProps) {
     };
 
     const handleJoin = async (groupId: string) => {
-        if (currentMemberId) {
+        if (!currentMemberId) return;
+
+        if (family && family.members.length > 0) {
+            setSelectedGroupIdToJoin(groupId);
+            setIsJoinDialogOpen(true);
+        } else {
+            // Direct enroll
             await enroll(groupId, currentMemberId);
             refetch();
         }
@@ -187,6 +199,23 @@ export function GroupList({ type }: GroupListProps) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {currentMemberId && family && selectedGroupIdToJoin && (
+                <JoinGroupDialog
+                    open={isJoinDialogOpen}
+                    onOpenChange={(open) => {
+                        setIsJoinDialogOpen(open);
+                        if (!open) setSelectedGroupIdToJoin(null);
+                    }}
+                    family={family}
+                    groupId={selectedGroupIdToJoin}
+                    currentMemberId={currentMemberId}
+                    onSuccess={() => {
+                        refetch();
+                        setSelectedGroupIdToJoin(null);
+                    }}
+                />
+            )}
         </div>
     );
 }

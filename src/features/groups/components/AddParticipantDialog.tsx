@@ -34,6 +34,8 @@ export function AddParticipantDialog({ open, onOpenChange, currentParticipants, 
             (p.person.email && p.person.email.toLowerCase().includes(search));
     });
 
+    const displayPersons = searchTerm ? filteredPersons : filteredPersons.slice(0, 15);
+
     const handleSubmit = async () => {
         if (!selectedPersonId) return;
         setIsSubmitting(true);
@@ -87,26 +89,31 @@ export function AddParticipantDialog({ open, onOpenChange, currentParticipants, 
                         ) : (
                             <div className="border rounded-md">
                                 <ScrollArea className="h-[200px]">
-                                    {filteredPersons.length === 0 ? (
+                                    {displayPersons.length === 0 ? (
                                         <div className="p-4 text-center text-sm text-slate-500">
                                             No se encontraron personas disponibles.
                                         </div>
                                     ) : (
                                         <div className="p-1">
-                                            {filteredPersons.map(p => (
+                                            {!searchTerm && (
+                                                <div className="px-2 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                                                    Sugerencias
+                                                </div>
+                                            )}
+                                            {displayPersons.map(p => (
                                                 <div
                                                     key={p.id}
                                                     onClick={() => setSelectedPersonId(p.id)}
                                                     className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${selectedPersonId === p.id ? 'bg-indigo-50 border-indigo-200 border' : 'hover:bg-slate-50 border border-transparent'}`}
                                                 >
                                                     <Avatar className="h-8 w-8">
-                                                        <AvatarImage src={p.person.profileImage} />
+                                                        <AvatarImage src={p.person?.profileImage} />
                                                         <AvatarFallback className="bg-slate-200 text-xs">
-                                                            {p.person.firstName[0]}{p.person.lastName[0]}
+                                                            {p.person?.firstName?.[0]}{p.person?.lastName?.[0]}
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <div className="flex flex-col flex-1">
-                                                        <span className="text-sm font-medium text-slate-900 leading-tight">{p.person.fullName}</span>
+                                                        <span className="text-sm font-medium text-slate-900 leading-tight">{p.person?.fullName}</span>
                                                         <span className="text-xs text-slate-500">{p.membershipStatus}</span>
                                                     </div>
                                                     <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center">

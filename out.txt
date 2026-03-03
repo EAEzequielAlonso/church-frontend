@@ -1,0 +1,2 @@
+src/modules/mentorship/components/MentorshipWizard.tsx(361,116): error TS2339: Property 'userId' does not exist on type '{ id: string; firstName: string; lastName: string; fullName: string; profileImage?: string | undefined; email?: string | undefined; phone?: string | undefined; }'.
+src/modules/mentorship/components/MentorshipWizard.tsx(389,116): error TS2339: Property 'userId' does not exist on type '{ id: string; firstName: string; lastName: string; fullName: string; profileImage?: string | undefined; email?: string | undefined; phone?: string | undefined; }'.

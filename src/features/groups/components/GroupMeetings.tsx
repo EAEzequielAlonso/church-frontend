@@ -1,11 +1,24 @@
 import React, { useState } from 'react';
-import { GroupMeetingDto, GroupType } from '../types/group.types';
+import { GroupMeetingDto, GroupType, CreateMeetingDto } from '../types/group.types';
 import { getGroupTypeConfig } from '../config/group-type.config';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, MapPin, ClipboardList } from 'lucide-react';
+import { Calendar, Plus, MapPin, ClipboardList, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { GroupAttendance } from './GroupAttendance';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { groupsApi } from '../api/groups.api';
+import { toast } from 'sonner';
 
 interface GroupMeetingsProps {
     meetings: GroupMeetingDto[];
@@ -20,7 +33,41 @@ export function GroupMeetings({ meetings, groupId, isAdminOrAuditor, isEnrolled,
     const config = getGroupTypeConfig(groupType);
     const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
 
+    // New Meeting Dialog state
+    const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [meetingDate, setMeetingDate] = useState('');
+    const [meetingLocation, setMeetingLocation] = useState('');
+    const [meetingNotes, setMeetingNotes] = useState('');
+
     const sortedMeetings = [...meetings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const handleCreateMeeting = async () => {
+        if (!meetingDate) {
+            toast.error('La fecha del encuentro es obligatoria.');
+            return;
+        }
+        setIsCreating(true);
+        try {
+            const payload: CreateMeetingDto = {
+                date: new Date(meetingDate).toISOString(),
+                location: meetingLocation || undefined,
+                notes: meetingNotes || undefined,
+            };
+            await groupsApi.createMeeting(groupId, payload);
+            toast.success('Encuentro registrado correctamente.');
+            setIsNewMeetingOpen(false);
+            setMeetingDate('');
+            setMeetingLocation('');
+            setMeetingNotes('');
+            refetch();
+        } catch (error) {
+            toast.error('No se pudo registrar el encuentro.');
+            console.error(error);
+        } finally {
+            setIsCreating(false);
+        }
+    };
 
     if (selectedMeetingId) {
         return (
@@ -46,7 +93,7 @@ export function GroupMeetings({ meetings, groupId, isAdminOrAuditor, isEnrolled,
                 </div>
 
                 {isAdminOrAuditor && (
-                    <Button size="sm" className="shadow-sm">
+                    <Button size="sm" className="shadow-sm" onClick={() => setIsNewMeetingOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Nuevo Encuentro
                     </Button>
@@ -98,6 +145,66 @@ export function GroupMeetings({ meetings, groupId, isAdminOrAuditor, isEnrolled,
                     ))}
                 </div>
             )}
+
+            {/* New Meeting Dialog */}
+            <Dialog open={isNewMeetingOpen} onOpenChange={setIsNewMeetingOpen}>
+                <DialogContent className="sm:max-w-[420px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-indigo-600" />
+                            Registrar Nuevo Encuentro
+                        </DialogTitle>
+                        <DialogDescription>
+                            Ingresá la fecha y opcionalmente la ubicación y notas del encuentro.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 pt-2">
+                        <div className="grid gap-2">
+                            <Label htmlFor="meeting-date">Fecha del Encuentro <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="meeting-date"
+                                type="datetime-local"
+                                value={meetingDate}
+                                onChange={(e) => setMeetingDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="meeting-location">Ubicación</Label>
+                            <Input
+                                id="meeting-location"
+                                placeholder="Ej: Salón principal, Zoom..."
+                                value={meetingLocation}
+                                onChange={(e) => setMeetingLocation(e.target.value)}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="meeting-notes">Notas</Label>
+                            <Textarea
+                                id="meeting-notes"
+                                placeholder="Tema tratado, observaciones..."
+                                rows={3}
+                                value={meetingNotes}
+                                onChange={(e) => setMeetingNotes(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="pt-4">
+                        <Button variant="outline" onClick={() => setIsNewMeetingOpen(false)} disabled={isCreating}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleCreateMeeting} disabled={isCreating || !meetingDate} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                            {isCreating ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Guardando...
+                                </>
+                            ) : 'Guardar Encuentro'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -24,6 +24,11 @@ export const familiesApi = {
         return data;
     },
 
+    getMyFamily: async (): Promise<FamilyDto> => {
+        const { data } = await api.get('/families/my-family');
+        return data;
+    },
+
     getById: async (id: string): Promise<FamilyDto> => {
         const { data } = await api.get(`/families/${id}`);
         return data;
@@ -52,16 +57,15 @@ export const familiesApi = {
     },
 
     searchMembers: async (query: string): Promise<MemberSearchResultDto[]> => {
-        const { data } = await api.get(`/members?search=${query}`);
-        // Assuming the backend supports ?search= or similar, or we filter locally if needed but backend is better.
-        // Original code did client-side filtering on all members?
-        // "const res = await api.get('/members'); const filtered = res.data.filter..." 
-        // Oh, the original code fetched ALL members and filtered client side. 
-        // I will replicate that behavior for safety, but wrapping it here.
-        if (!query) return [];
+        const { data } = await api.get(`/members`);
+
+        if (!query) {
+            return data.slice(0, 10);
+        }
+
         return data.filter((m: any) =>
         (m.person?.fullName?.toLowerCase().includes(query.toLowerCase()) ||
             m.person?.email?.toLowerCase().includes(query.toLowerCase()))
-        ).slice(0, 5);
+        ).slice(0, 10);
     }
 };

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useBooks, useCategories, useLibraryMutations } from '../hooks/useLibrary';
-import { BookStatus, BookOwnershipType, Book } from '../types/library.types';
+import { Book } from '../types/library.types';
+import { getBookStatusUI } from '../utils/library-status.utils';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Search, Plus, BookOpen, AlertCircle, Trash2, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BookDialog } from './BookDialog';
 import { toast } from 'sonner';
@@ -26,6 +29,7 @@ export function BookCatalog() {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState<string>('all');
     const [availability, setAvailability] = useState<string>('all');
+    const [onlyMine, setOnlyMine] = useState(false);
     const [page, setPage] = useState(1);
 
     // Reset page when filters change
@@ -40,6 +44,7 @@ export function BookCatalog() {
         search,
         categoryId: category === 'all' ? undefined : category,
         availability: availability === 'all' ? undefined : (availability as 'AVAILABLE' | 'UNAVAILABLE'),
+        ownerMemberId: onlyMine ? user?.memberId : undefined,
         page,
         limit: 10
     });
@@ -62,10 +67,10 @@ export function BookCatalog() {
 
     const canManageBook = (book: Book) => {
         if (!user) return false;
-        // Librarian or Pastor can manage all
-        if (user.roles?.includes('LIBRARIAN') || user.ecclesiasticalRole === 'PASTOR') return true;
-        // Owner checks
-        if (book.ownershipType === BookOwnershipType.MEMBER && book.ownerMemberId === user.memberId) return true;
+        // Only LIBRARIAN can manage church books or any book
+        if (user.roles?.includes('LIBRARIAN')) return true;
+        // Owner can manage their own personal books
+        if (book.ownershipType === 'MEMBER' && book.ownerMemberId === user.memberId) return true;
         return false;
     };
 
@@ -124,6 +129,18 @@ export function BookCatalog() {
                             <SelectItem value="UNAVAILABLE">Prestados</SelectItem>
                         </SelectContent>
                     </Select>
+
+                    {/* Solo mis libros toggle — inline with filters */}
+                    <div className="flex items-center gap-2 px-2 border border-slate-200 rounded-lg bg-white h-10 shrink-0">
+                        <Switch
+                            id="only-mine"
+                            checked={onlyMine}
+                            onCheckedChange={(checked) => { setOnlyMine(checked); setPage(1); }}
+                        />
+                        <Label htmlFor="only-mine" className="text-sm text-slate-600 cursor-pointer select-none whitespace-nowrap">
+                            Solo mis libros
+                        </Label>
+                    </div>
                 </div>
 
                 <Button onClick={() => { setBookToEdit(undefined); setIsDialogOpen(true); }}>
@@ -162,12 +179,16 @@ export function BookCatalog() {
                                         </div>
                                     )}
                                     <Badge
-                                        className={`absolute top-2 right-2 shadow-sm text-[10px] px-1.5 py-0.5 ${book.status === BookStatus.AVAILABLE
-                                            ? 'bg-green-600 hover:bg-green-700 border-transparent text-white'
-                                            : 'bg-red-600 hover:bg-red-700 border-transparent text-white'
-                                            }`}
+                                        className={`absolute top-2 right-2 shadow-sm text-[10px] px-1.5 py-0.5 border-transparent text-white
+                                            ${book.status === 'AVAILABLE' ? 'bg-emerald-600 hover:bg-emerald-700'
+                                                : book.status === 'RESERVED' ? 'bg-amber-500 hover:bg-amber-600'
+                                                    : book.status === 'LOANED' ? 'bg-red-600 hover:bg-red-700'
+                                                        : 'bg-slate-500 hover:bg-slate-600'}`}
                                     >
-                                        {book.status === BookStatus.AVAILABLE ? 'Disponible' : 'Prestado'}
+                                        {book.status === 'AVAILABLE' ? 'Disponible'
+                                            : book.status === 'RESERVED' ? 'Reservado'
+                                                : book.status === 'LOANED' ? 'Prestado'
+                                                    : 'Retirado'}
                                     </Badge>
                                 </div>
                                 <CardHeader className="p-3 pb-1">
@@ -182,16 +203,22 @@ export function BookCatalog() {
                                 <CardContent className="flex-grow p-3 pt-0">
                                     <div className="mt-2 flex items-center text-[10px] text-muted-foreground gap-1.5">
                                         <BookOpen className="h-3 w-3" />
-                                        <span className="truncate">{book.isChurchOwned ? 'Iglesia' : `${book.ownerMember?.person?.firstName || 'Miembro'}`}</span>
+                                        <span className="truncate">
+                                            {book.ownershipType === 'CHURCH' ? 'Iglesia'
+                                                : book.ownerMember?.person?.fullName ?? 'Hermano/a'}
+                                        </span>
                                     </div>
                                 </CardContent>
                                 <CardFooter>
                                     <Button
                                         className="w-full h-8 text-xs"
-                                        disabled={book.status !== BookStatus.AVAILABLE}
+                                        disabled={book.status !== 'AVAILABLE'}
                                         onClick={() => handleRequestLoan(book.id)}
                                     >
-                                        {book.status === BookStatus.AVAILABLE ? 'Solicitar' : 'No Disponible'}
+                                        {book.status === 'AVAILABLE' ? 'Solicitar'
+                                            : book.status === 'RESERVED' ? 'Reservado'
+                                                : book.status === 'LOANED' ? 'Prestado'
+                                                    : 'No disponible'}
                                     </Button>
                                 </CardFooter>
                             </Card>

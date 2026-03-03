@@ -12,13 +12,14 @@ import { useAuth } from '@/context/AuthContext';
 
 interface CreateEventDialogProps {
     onEventCreated: () => void;
+    onSubmitOverride?: (data: Partial<CreateCalendarEventDto> & { startDate: string, endDate: string }) => Promise<void>;
     defaultType?: CalendarEventType;
     defaultEntityId?: string; // ministryId or smallGroupId
     trigger?: React.ReactNode;
     eventToEdit?: CalendarEvent;
 }
 
-export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId, trigger, eventToEdit, open: controlledOpen, onOpenChange: setControlledOpen }: CreateEventDialogProps & { open?: boolean; onOpenChange?: (open: boolean) => void }) {
+export function CreateEventDialog({ onEventCreated, onSubmitOverride, defaultType, defaultEntityId, trigger, eventToEdit, open: controlledOpen, onOpenChange: setControlledOpen }: CreateEventDialogProps & { open?: boolean; onOpenChange?: (open: boolean) => void }) {
     const isEditing = !!eventToEdit;
     const { user } = useAuth();
     const [internalOpen, setInternalOpen] = useState(false);
@@ -40,8 +41,7 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
         type: defaultType || CalendarEventType.PERSONAL,
         color: '#3b82f6', // blue
         isAllDay: false,
-        ministryId: defaultType === CalendarEventType.MINISTRY ? defaultEntityId : undefined,
-        smallGroupId: defaultType === CalendarEventType.SMALL_GROUP ? defaultEntityId : undefined
+        ownerId: (defaultType === CalendarEventType.MINISTRY || defaultType === CalendarEventType.SMALL_GROUP) ? defaultEntityId : undefined,
     });
 
     // Reset when opening or defaults change
@@ -78,8 +78,7 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
                     description: '',
                     location: '',
                     type: defaultType || prev.type || CalendarEventType.PERSONAL,
-                    ministryId: defaultType === CalendarEventType.MINISTRY ? defaultEntityId : prev.ministryId,
-                    smallGroupId: defaultType === CalendarEventType.SMALL_GROUP ? defaultEntityId : prev.smallGroupId
+                    ownerId: (defaultType === CalendarEventType.MINISTRY || defaultType === CalendarEventType.SMALL_GROUP) ? defaultEntityId : prev.ownerId,
                 }));
                 // Reset date inputs if needed or keep them empty
                 setDateInput('');
@@ -110,27 +109,35 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
             const durationMs = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
             const endDateTime = new Date(startDateTime.getTime() + durationMs);
 
-            const token = localStorage.getItem('accessToken');
-            const url = isEditing
-                ? `${process.env.NEXT_PUBLIC_API_URL}/agenda/${eventToEdit.id}`
-                : `${process.env.NEXT_PUBLIC_API_URL}/agenda`;
-
-            const res = await fetch(url, {
-                method: isEditing ? 'PATCH' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
+            if (onSubmitOverride) {
+                await onSubmitOverride({
                     ...formData,
                     startDate: startDateTime.toISOString(),
                     endDate: endDateTime.toISOString()
-                })
-            });
+                });
+            } else {
+                const token = localStorage.getItem('accessToken');
+                const url = isEditing
+                    ? `${process.env.NEXT_PUBLIC_API_URL}/agenda/${eventToEdit.id}`
+                    : `${process.env.NEXT_PUBLIC_API_URL}/agenda`;
 
-            if (!res.ok) {
-                const error = await res.json();
-                throw new Error(error.message || `Error al ${isEditing ? 'editar' : 'crear'} evento`);
+                const res = await fetch(url, {
+                    method: isEditing ? 'PATCH' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        ...formData,
+                        startDate: startDateTime.toISOString(),
+                        endDate: endDateTime.toISOString()
+                    })
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.message || `Error al ${isEditing ? 'editar' : 'crear'} evento`);
+                }
             }
 
             toast.success(`Evento ${isEditing ? 'editado' : 'creado'} exitosamente`);
@@ -241,8 +248,8 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
                             <Label>ID del Ministerio</Label>
                             <Input
                                 placeholder="UUID del Ministerio"
-                                value={formData.ministryId || ''}
-                                onChange={(e) => handleChange('ministryId', e.target.value)}
+                                value={formData.ownerId || ''}
+                                onChange={(e) => handleChange('ownerId', e.target.value)}
                                 className="font-mono text-xs"
                             />
                         </div>
@@ -253,8 +260,8 @@ export function CreateEventDialog({ onEventCreated, defaultType, defaultEntityId
                             <Label>ID del Grupo Pequeño</Label>
                             <Input
                                 placeholder="UUID del Grupo Pequeño"
-                                value={formData.smallGroupId || ''}
-                                onChange={(e) => handleChange('smallGroupId', e.target.value)}
+                                value={formData.ownerId || ''}
+                                onChange={(e) => handleChange('ownerId', e.target.value)}
                                 className="font-mono text-xs"
                             />
                         </div>

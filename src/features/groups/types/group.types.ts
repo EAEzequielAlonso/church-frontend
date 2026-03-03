@@ -32,6 +32,7 @@ export interface ChurchPersonDto {
         profileImage?: string;
         email?: string;
         phone?: string;
+        user?: { id: string };
     };
     membershipStatus: string;
 }

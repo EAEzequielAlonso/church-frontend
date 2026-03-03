@@ -147,8 +147,6 @@ export function GroupForm({
                                         <SelectItem value="SMALL_GROUP">Grupo Pequeño</SelectItem>
                                         <SelectItem value="COURSE">Curso / Clase</SelectItem>
                                         <SelectItem value="ACTIVITY">Evento / Actividad</SelectItem>
-                                        <SelectItem value="DISCIPLESHIP">Discipulado</SelectItem>
-                                        <SelectItem value="MINISTRY_TEAM">Equipo Ministerial</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 {errors.type && <span className="text-xs text-red-500 font-medium">{errors.type.message}</span>}
@@ -233,8 +231,8 @@ export function GroupForm({
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="PUBLIC">Público</SelectItem>
-                                        <SelectItem value="PRIVATE">Privado u Oculto</SelectItem>
+                                        <SelectItem value="PUBLIC">Público (cualquiera puede unirse)</SelectItem>
+                                        <SelectItem value="PRIVATE">Privado (solo por invitación)</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 {errors.visibility && <span className="text-xs text-red-500 font-medium">{errors.visibility.message}</span>}

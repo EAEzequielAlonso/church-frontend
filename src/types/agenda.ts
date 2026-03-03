@@ -4,6 +4,10 @@ export enum CalendarEventType {
     CHURCH = 'CHURCH',
     COUNSELING = 'COUNSELING',
     SMALL_GROUP = 'SMALL_GROUP',
+    DISCIPLESHIP = 'DISCIPLESHIP',
+    FOLLOW_UP = 'FOLLOW_UP',
+    COURSE = 'COURSE',
+    ACTIVITY = 'ACTIVITY',
     OTHER = 'OTHER'
 }
 
@@ -17,11 +21,7 @@ export interface CalendarEvent {
     type: CalendarEventType;
     color?: string;
     isAllDay?: boolean;
-    ministryId?: string;
-    smallGroup?: {
-        id: string;
-        name: string;
-    };
+    ownerId?: string;
     attendees?: {
         id: string;
         firstName: string;
@@ -39,7 +39,6 @@ export interface CreateCalendarEventDto {
     type: CalendarEventType;
     color?: string;
     isAllDay?: boolean;
-    ministryId?: string;
-    smallGroupId?: string;
+    ownerId?: string;
     attendeeIds?: string[];
 }

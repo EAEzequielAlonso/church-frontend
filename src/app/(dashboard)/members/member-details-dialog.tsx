@@ -107,44 +107,6 @@ export function MemberDetailsDialog({ isOpen, onClose, member, loading, onEdit }
                                     <p className="flex items-center gap-2">Documento: {member.person?.documentId || 'N/A'}</p>
                                 </div>
                             </div>
-
-                            {/* Church Info */}
-                            <div className="space-y-4">
-                                <h4 className="font-semibold flex items-center gap-2"><Activity className="w-4 h-4" /> Vida en la Iglesia</h4>
-                                <div className="text-sm space-y-2 text-slate-600">
-                                    <p>Miembro desde: {new Date(member.joinedAt).toLocaleDateString()}</p>
-                                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="font-medium">Discipulado</span>
-                                            <Badge variant="secondary">{member.discipleshipStats?.status || 'No iniciado'}</Badge>
-                                        </div>
-                                        <p className="text-xs text-slate-400">Nivel {member.discipleshipStats?.level || 0}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Counseling Summary (Safe View) */}
-                            <div className="md:col-span-2 space-y-4">
-                                <h4 className="font-semibold flex items-center gap-2"><Heart className="w-4 h-4" /> Bienestar y Consejería</h4>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="p-4 rounded-xl bg-orange-50 border border-orange-100 text-center">
-                                        <div className="text-2xl font-bold text-orange-600">{member.counselingStats?.total || 0}</div>
-                                        <div className="text-xs text-orange-600 font-medium">Procesos Totales</div>
-                                    </div>
-                                    <div className="p-4 rounded-xl bg-green-50 border border-green-100 text-center">
-                                        <div className="text-2xl font-bold text-green-600">{member.counselingStats?.closed || 0}</div>
-                                        <div className="text-xs text-green-600 font-medium">Concluidos</div>
-                                    </div>
-                                    <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
-                                        <div className="text-2xl font-bold text-blue-600">{member.counselingStats?.open || 0}</div>
-                                        <div className="text-xs text-blue-600 font-medium">En Curso</div>
-                                    </div>
-                                </div>
-                                <p className="text-xs text-slate-400 text-center italic mt-2">
-                                    * La información detallada de consejería es confidencial y solo accesible por el consejero asignado.
-                                </p>
-                            </div>
-
                         </div>
                     </div>
                 )}

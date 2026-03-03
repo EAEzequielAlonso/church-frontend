@@ -3,6 +3,9 @@ import { GroupDto } from '../types/group.types';
 import { getGroupTypeConfig } from '../config/group-type.config';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, CalendarDays, ClipboardCheck, Info } from 'lucide-react';
+import { useState } from 'react';
+import { useMyFamily } from '@/features/families/hooks/useMyFamily';
+import { JoinGroupDialog } from './JoinGroupDialog';
 
 import { GroupParticipants } from './GroupParticipants';
 import { GroupMeetings } from './GroupMeetings';
@@ -29,6 +32,22 @@ export function GroupDetail({
     // A person is enrolled if they appear in participants array
     const isEnrolled = group.participants?.some(p => p.churchPerson.id === currentMemberId) ?? false;
 
+    // Check if user has a family for the multi-join modal
+    const { family, isLoading: isLoadingFamily } = useMyFamily(currentMemberId);
+    const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+
+    const handleJoinClick = () => {
+        if (!currentMemberId) return;
+
+        // If user has a family with other members, show the selection modal.
+        // If not, proceed with direct enrollment.
+        if (family && family.members.length > 0) {
+            setIsJoinDialogOpen(true);
+        } else {
+            onEnroll(currentMemberId);
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Header / Hero */}
@@ -53,20 +72,23 @@ export function GroupDetail({
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto">
-                        {!isEnrolled ? (
-                            <button
-                                onClick={() => currentMemberId && onEnroll(currentMemberId)}
-                                className={`px-6 py-2.5 w-full md:w-auto rounded-lg font-semibold text-white transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 ${config.color.replace('text-', 'bg-')}`}
-                            >
-                                {config.joinButtonLabel}
-                            </button>
-                        ) : (
-                            <button
-                                onClick={() => currentMemberId && onDisenroll(currentMemberId)}
-                                className={`px-6 py-2.5 w-full md:w-auto rounded-lg font-semibold bg-white border-2 text-slate-700 hover:bg-slate-50 transition-all ${config.borderColor}`}
-                            >
-                                {config.leaveButtonLabel}
-                            </button>
+                        {group.visibility === 'PUBLIC' && (
+                            !isEnrolled ? (
+                                <button
+                                    onClick={handleJoinClick}
+                                    disabled={isLoadingFamily}
+                                    className={`px-6 py-2.5 w-full md:w-auto rounded-lg font-semibold text-white transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 ${config.color.replace('text-', 'bg-')} disabled:opacity-50`}
+                                >
+                                    {config.joinButtonLabel}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => currentMemberId && onDisenroll(currentMemberId)}
+                                    className={`px-6 py-2.5 w-full md:w-auto rounded-lg font-semibold bg-white border-2 text-slate-700 hover:bg-slate-50 transition-all ${config.borderColor}`}
+                                >
+                                    {config.leaveButtonLabel}
+                                </button>
+                            )
                         )}
                     </div>
                 </div>
@@ -123,6 +145,17 @@ export function GroupDetail({
                     />
                 </TabsContent>
             </Tabs>
+
+            {currentMemberId && family && (
+                <JoinGroupDialog
+                    open={isJoinDialogOpen}
+                    onOpenChange={setIsJoinDialogOpen}
+                    family={family}
+                    groupId={group.id}
+                    currentMemberId={currentMemberId}
+                    onSuccess={refetch}
+                />
+            )}
         </div>
     );
 }

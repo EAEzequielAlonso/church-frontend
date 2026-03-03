@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { familiesApi, MemberSearchResultDto } from '../api/families.api';
 import { toast } from 'sonner';
 
@@ -7,9 +7,9 @@ export function useMemberSearch() {
     const [isLoading, setIsLoading] = useState(false);
 
     const search = async (query: string) => {
-        if (!query || query.length < 2) {
-            setResults([]);
-            return;
+        if (!query) {
+            // Load suggestions
+            query = '';
         }
         setIsLoading(true);
         try {
@@ -24,7 +24,11 @@ export function useMemberSearch() {
         }
     };
 
-    const clear = () => setResults([]);
+    const clear = () => search('');
+
+    useEffect(() => {
+        search('');
+    }, []);
 
     return { search, results, isLoading, clear };
 }

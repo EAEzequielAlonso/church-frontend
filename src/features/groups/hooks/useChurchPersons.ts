@@ -5,11 +5,11 @@ import { ChurchPersonDto } from '../types/group.types';
 
 export function useChurchPersons() {
     const fetcher = async () => {
-        const res = await api.get('/church-persons');
+        const res = await api.get('/members');
         return res.data;
     };
 
-    const { data: persons, error, isLoading } = useSWR('/church-persons', fetcher, {
+    const { data: persons, error, isLoading } = useSWR('/members', fetcher, {
         revalidateOnFocus: false
     });
 

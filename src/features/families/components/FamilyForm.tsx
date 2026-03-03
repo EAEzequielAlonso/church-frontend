@@ -76,36 +76,31 @@ function InitialMemberInput({
         });
     };
 
-    if (value) {
+    if (value && value.memberId) {
         return (
             <div className="border p-3 rounded-md bg-slate-50 relative">
-                <Label className="text-xs font-bold uppercase text-slate-500 mb-1 block">{label}</Label>
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        {value.memberId && (
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={value.profileImage} />
-                                <AvatarFallback className="text-[10px] bg-indigo-100 text-indigo-700">
-                                    {value.displayName?.substring(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
-                        )}
-                        <span className="text-sm font-medium">
-                            {value.memberId
-                                ? (value.displayName || 'Miembro Existente')
-                                : `${value.newMember?.firstName} ${value.newMember?.lastName}`
-                            }
-                        </span>
-                    </div>
+                <div className="flex justify-between items-center mb-1">
+                    <Label className="text-xs font-bold uppercase text-slate-500 block">{label}</Label>
                     <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => onChange(null)}
-                        className="h-6 w-6 p-0 text-red-400"
+                        className="h-5 w-5 p-0 text-red-400 hover:text-red-600 hover:bg-transparent"
                     >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                     </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={value.profileImage} />
+                        <AvatarFallback className="text-[10px] bg-indigo-100 text-indigo-700">
+                            {value.displayName?.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium">
+                        {value.displayName || 'Miembro Existente'}
+                    </span>
                 </div>
             </div>
         );
@@ -114,7 +109,15 @@ function InitialMemberInput({
     return (
         <div className="border p-3 rounded-md space-y-2">
             <div className="flex justify-between items-center">
-                <Label className="text-xs font-bold uppercase text-slate-500">{label}</Label>
+                <div className="flex items-center gap-2">
+                    <Label className="text-xs font-bold uppercase text-slate-500">{label}</Label>
+                    {(value || role === 'CHILD') && (
+                        <Trash2
+                            className="w-3 h-3 text-red-300 cursor-pointer hover:text-red-500"
+                            onClick={() => onChange(null)}
+                        />
+                    )}
+                </div>
                 <div className="text-[10px] space-x-2">
                     {allowNew && (
                         <>
@@ -180,11 +183,15 @@ function InitialMemberInput({
 export function FamilyForm({ initialData, isEdit, onSubmit, isLoading, onCancel }: FamilyFormProps) {
     const [name, setName] = useState(initialData?.name || '');
 
-    // Initial Members State (Only for Create Mode)
+    // Augmented type to store display name, profile image and a unique key
+    type MemberInputStateWithKey = MemberInputState & {
+        keyId?: string;
+    };
+
     // Initial Members State (Only for Create Mode)
     const [father, setFather] = useState<MemberInputState | null>(null);
     const [mother, setMother] = useState<MemberInputState | null>(null);
-    const [children, setChildren] = useState<CreateFamilyMemberInput[]>([]);
+    const [children, setChildren] = useState<MemberInputStateWithKey[]>([]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -192,18 +199,28 @@ export function FamilyForm({ initialData, isEdit, onSubmit, isLoading, onCancel 
         if (isEdit) {
             onSubmit({ name });
         } else {
-            const cleanMember = (m: MemberInputState): CreateFamilyMemberInput => {
-                const { displayName, profileImage, ...rest } = m;
+            const cleanMember = (m: MemberInputStateWithKey): CreateFamilyMemberInput => {
+                const { displayName, profileImage, keyId, ...rest } = m;
                 return rest;
             };
 
             const members: CreateFamilyMemberInput[] = [];
             if (father) members.push(cleanMember(father));
             if (mother) members.push(cleanMember(mother));
-            members.push(...children); // children are already clean CreateFamilyMemberInput (no display name logic there yet?) 
-            // wait, children definition is `CreateFamilyMemberInput[]` in state, but let's check if we added extra props there too. 
-            // In `addChild`, we push `{ role: 'CHILD', newMember: ... }`. Use logic doesn't add displayName to children yet (only distinct inputs). 
-            // But strict typing in sanitize function is safer.
+
+            // Filter out empty or incomplete children and clean them
+            const validChildren = children.filter(c => c.memberId || (c.newMember?.firstName && c.newMember?.lastName));
+
+            // Check for duplicate memberIds in the whole set
+            const allMemberIds = [father?.memberId, mother?.memberId, ...validChildren.map(c => c.memberId)].filter(Boolean);
+            const uniqueMemberIds = new Set(allMemberIds);
+
+            if (uniqueMemberIds.size < allMemberIds.length) {
+                alert('No puedes agregar a la misma persona más de una vez en la familia.');
+                return;
+            }
+
+            members.push(...validChildren.map(cleanMember));
 
             onSubmit({
                 name,
@@ -215,21 +232,18 @@ export function FamilyForm({ initialData, isEdit, onSubmit, isLoading, onCancel 
     const addChild = () => {
         setChildren([...children, {
             role: 'CHILD',
-            newMember: { firstName: '', lastName: '', status: MembershipStatus.CHILD }
+            keyId: Math.random().toString(36).substr(2, 9)
         }]);
     };
 
-    const updateChild = (index: number, field: string, val: string) => {
-        const newChildren = [...children];
-        if (newChildren[index].newMember) {
-            // @ts-ignore
-            newChildren[index].newMember[field] = val;
-            setChildren(newChildren);
+    const updateChild = (index: number, val: MemberInputStateWithKey | null) => {
+        if (val === null) {
+            setChildren(children.filter((_, i) => i !== index));
+            return;
         }
-    };
-
-    const removeChild = (index: number) => {
-        setChildren(children.filter((_, i) => i !== index));
+        const newChildren = [...children];
+        newChildren[index] = { ...val, keyId: children[index].keyId };
+        setChildren(newChildren);
     };
 
     return (
@@ -249,37 +263,29 @@ export function FamilyForm({ initialData, isEdit, onSubmit, isLoading, onCancel 
                     <Label className="text-sm font-medium text-slate-700">Integrantes Iniciales</Label>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <InitialMemberInput role="FATHER" label="Padre" value={father} onChange={setFather} allowNew={false} />
-                        <InitialMemberInput role="MOTHER" label="Madre" value={mother} onChange={setMother} allowNew={false} />
+                        <InitialMemberInput role="FATHER" label="Padre" value={father} onChange={setFather} allowNew={true} />
+                        <InitialMemberInput role="MOTHER" label="Madre" value={mother} onChange={setMother} allowNew={true} />
                     </div>
 
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                            <Label className="text-xs font-bold uppercase text-slate-500">Hijos (Nuevos Registros)</Label>
+                            <Label className="text-xs font-bold uppercase text-slate-500">Hijos</Label>
                             <Button type="button" variant="outline" size="sm" onClick={addChild} className="h-6 text-xs">
                                 <Plus className="w-3 h-3 mr-1" /> Agregar Hijo
                             </Button>
                         </div>
 
-                        {children.map((child, idx) => (
-                            <div key={idx} className="flex gap-2 items-center">
-                                <Input
-                                    placeholder="Nombre"
-                                    className="h-8 text-sm"
-                                    value={child.newMember?.firstName}
-                                    onChange={(e) => updateChild(idx, 'firstName', e.target.value)}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {children.map((child, idx) => (
+                                <InitialMemberInput
+                                    key={child.keyId}
+                                    role="CHILD"
+                                    label={`Hijo ${idx + 1}`}
+                                    value={child}
+                                    onChange={(val) => updateChild(idx, val)}
                                 />
-                                <Input
-                                    placeholder="Apellido"
-                                    className="h-8 text-sm"
-                                    value={child.newMember?.lastName}
-                                    onChange={(e) => updateChild(idx, 'lastName', e.target.value)}
-                                />
-                                <Button type="button" variant="ghost" size="sm" onClick={() => removeChild(idx)} className="h-8 w-8 p-0 text-red-400">
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                         {children.length === 0 && <p className="text-xs text-slate-400 italic">No hay hijos agregados.</p>}
                     </div>
                 </div>

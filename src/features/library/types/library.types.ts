@@ -1,23 +1,6 @@
-export enum BookStatus {
-    AVAILABLE = 'AVAILABLE',
-    LOANED = 'LOANED',
-    REMOVED = 'REMOVED',
-}
-
-export enum LoanStatus {
-    REQUESTED = 'REQUESTED',
-    APPROVED = 'APPROVED',
-    DELIVERED = 'DELIVERED',
-    RETURNED = 'RETURNED',
-    REJECTED = 'REJECTED',
-    CANCELLED = 'CANCELLED',
-    ACTIVE = 'ACTIVE', // Deprecated: Used for legacy data migration
-}
-
-export enum BookOwnershipType {
-    CHURCH = 'CHURCH',
-    MEMBER = 'MEMBER',
-}
+export type BookStatus = 'AVAILABLE' | 'RESERVED' | 'LOANED' | 'REMOVED';
+export type LoanStatus = 'REQUESTED' | 'APPROVED' | 'DELIVERED' | 'RETURNED' | 'REJECTED' | 'CANCELLED';
+export type BookOwnershipType = 'CHURCH' | 'MEMBER';
 
 export interface BookCategory {
     id: string;
@@ -25,6 +8,17 @@ export interface BookCategory {
     description?: string;
     color?: string;
     icon?: string;
+}
+
+export interface OwnerMember {
+    id: string;
+    person: {
+        id: string;
+        fullName: string;
+        firstName: string;
+        lastName: string;
+        profileImage?: string;
+    };
 }
 
 export interface Book {
@@ -37,10 +31,9 @@ export interface Book {
     isbn?: string;
     coverUrl?: string;
     ownershipType: BookOwnershipType;
-    isChurchOwned: boolean;
     status: BookStatus;
     ownerMemberId?: string;
-    ownerMember?: any; // Simple member info
+    ownerMember?: OwnerMember;
     code?: string;
     condition?: string;
     location?: string;
@@ -49,12 +42,22 @@ export interface Book {
     updatedAt: string;
 }
 
+export interface BorrowerInfo {
+    id: string;
+    person: {
+        id: string;
+        fullName: string;
+        firstName: string;
+        profileImage?: string;
+    };
+}
+
 export interface Loan {
     id: string;
     bookId: string;
     book?: Book;
     borrowerId: string;
-    borrower?: any;
+    borrower?: BorrowerInfo;
     requestedAt: string;
     approvedAt?: string;
     deliveredAt?: string;
@@ -63,6 +66,8 @@ export interface Loan {
     status: LoanStatus;
     conditionAtLoan?: string;
     conditionAtReturn?: string;
+    approvedByUserId?: string;
+    returnedConfirmedByUserId?: string;
 }
 
 export interface BookFilters {
@@ -71,7 +76,6 @@ export interface BookFilters {
     status?: BookStatus;
     availability?: 'AVAILABLE' | 'UNAVAILABLE';
     ownerMemberId?: string;
-    isChurchOwned?: boolean;
     page?: number;
     limit?: number;
 }
