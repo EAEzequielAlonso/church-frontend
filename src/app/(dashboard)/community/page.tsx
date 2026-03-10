@@ -31,7 +31,7 @@ function CommunityPageContent() {
                         <Users className="w-4 h-4 hidden sm:block" />
                         Grupos
                     </TabsTrigger>
-                    <TabsTrigger value="COURSE" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700 flex items-center gap-2">
+                    <TabsTrigger value="COURSE" className="data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700 flex items-center gap-2">
                         <BookOpen className="w-4 h-4 hidden sm:block" />
                         Cursos
                     </TabsTrigger>

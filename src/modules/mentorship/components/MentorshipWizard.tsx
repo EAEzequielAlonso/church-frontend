@@ -428,10 +428,10 @@ export function MentorshipWizard() {
         const availableMentors = persons.filter(p => {
             const roles = p.functionalRoles || [];
             if (selectedType === 'DISCIPLESHIP') {
-                return roles.includes(FunctionalRole.DISCIPLER as any) || roles.includes(FunctionalRole.ADMIN_CHURCH as any) || roles.includes(FunctionalRole.AUDITOR as any);
+                return roles.includes(FunctionalRole.DISCIPLER) || roles.includes(FunctionalRole.ADMIN_CHURCH) || roles.includes(FunctionalRole.AUDITOR);
             }
             if (selectedType === 'COUNSELING') {
-                return roles.includes(FunctionalRole.COUNSELOR as any) || roles.includes(FunctionalRole.ADMIN_CHURCH as any) || roles.includes(FunctionalRole.AUDITOR as any);
+                return roles.includes(FunctionalRole.COUNSELOR) || roles.includes(FunctionalRole.ADMIN_CHURCH) || roles.includes(FunctionalRole.AUDITOR);
             }
             if (selectedType === 'FOLLOW_UP') {
                 return p.membershipStatus === 'MEMBER';

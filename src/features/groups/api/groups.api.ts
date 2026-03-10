@@ -57,6 +57,11 @@ export const groupsApi = {
         await api.delete(`/groups/${groupId}/participants/${participantId}`);
     },
 
+    updateParticipantRole: async (groupId: string, participantId: string, role: string) => {
+        const { data } = await api.patch(`/groups/${groupId}/participants/${participantId}/role`, { role });
+        return data;
+    },
+
     // Meeting / Attendance Management (To be fully implemented in backend if not yet)
     createMeeting: async (groupId: string, payload: CreateMeetingDto) => {
         const { data } = await api.post(`/groups/${groupId}/meetings`, payload);

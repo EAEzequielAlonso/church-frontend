@@ -28,6 +28,7 @@ export interface CalendarEvent {
         lastName: string;
         avatarUrl?: string;
     }[];
+    meetingNote?: any;
 }
 
 export interface CreateCalendarEventDto {

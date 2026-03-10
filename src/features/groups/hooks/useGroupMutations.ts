@@ -44,10 +44,24 @@ export function useGroupMutations() {
         }
     };
 
+    const updateRole = async (groupId: string, churchPersonId: string, role: import('../types/group.types').GroupRole): Promise<void> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            await groupsApi.updateParticipantRole(groupId, churchPersonId, role);
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Error al actualizar rol');
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return {
         enroll,
         disenroll,
         addParticipant,
+        updateRole,
         isLoading,
         error
     };

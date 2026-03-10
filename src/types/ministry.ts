@@ -1,4 +1,5 @@
 import { Person, MinistryRole } from "./auth-types";
+import { CalendarEvent } from "./agenda";
 
 export enum MinistryEventType {
     MEETING = 'MEETING',
@@ -20,7 +21,7 @@ export interface Ministry {
     };
     members: MinistryMember[];
     tasks: MinistryTask[];
-    calendarEvents: any[]; // Using any for now to avoid circular dependency
+    calendarEvents: CalendarEvent[];
     serviceDuties?: ServiceDuty[];
 }
 
@@ -51,7 +52,7 @@ export interface MinistryTask {
         person: Person;
     };
     dueDate?: string;
-    status: 'pending' | 'completed';
+    status: 'pending' | 'in_progress' | 'completed' | 'incomplete' | 'cancelled';
     createdAt: string;
 }
 

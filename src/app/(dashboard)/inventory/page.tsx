@@ -1,55 +1,53 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import api from '@/lib/api';
-import { InventoryItem, InventoryItemCategory, InventoryMovementType } from '@/types/inventory';
+import { useState } from 'react';
+import {
+    InventoryItem,
+    InventoryMovementType,
+    InventoryItemCategory,
+    INVENTORY_CATEGORY_LABELS,
+} from '@/features/inventory/types/inventory.types';
+import { useInventoryItems } from '@/features/inventory/hooks/useInventory';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Plus, Minus, History, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
+import { Package, Plus, Search, Layers } from 'lucide-react';
 import CreateItemForm from './components/CreateItemForm';
 import MovementForm from './components/MovementForm';
 import MovementHistory from './components/MovementHistory';
 import InventoryCard from './components/InventoryCard';
 
 export default function InventoryPage() {
-    const [items, setItems] = useState<InventoryItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
+    const { user } = useAuth();
+    const canEdit = user?.roles?.includes('MINISTRY_LEADER') ?? false;
 
-    // UI States
+    // Filters
+    const [search, setSearch] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState<string>('all');
+
+    // Data
+    const { data: items = [], isLoading } = useInventoryItems();
+
+    // Dialogs
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-    // Movement Modal State
-    const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-    const [movementType, setMovementType] = useState<InventoryMovementType | null>(null);
     const [isMovementOpen, setIsMovementOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-
-    const fetchItems = async () => {
-        try {
-            setLoading(true);
-            const res = await api.get('/inventory');
-            setItems(res.data);
-        } catch (error) {
-            console.error('Error fetching inventory:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchItems();
-    }, []);
+    const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+    const [movementType, setMovementType] = useState<InventoryMovementType>('IN');
 
     const handleMovement = (item: InventoryItem, type: InventoryMovementType) => {
         setSelectedItem(item);
@@ -62,37 +60,36 @@ export default function InventoryPage() {
         setIsHistoryOpen(true);
     };
 
-    const filteredItems = items.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredItems = items.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
+            item.category.toLowerCase().includes(search.toLowerCase());
+        const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+        return matchesSearch && matchesCategory;
+    });
 
-    const categoryLabels: Record<string, string> = {
-        [InventoryItemCategory.FURNITURE]: 'Mobiliario',
-        [InventoryItemCategory.SOUND]: 'Sonido',
-        [InventoryItemCategory.INSTRUMENTS]: 'Instrumentos',
-        [InventoryItemCategory.TECHNOLOGY]: 'Tecnología',
-        [InventoryItemCategory.LIGHTING]: 'Iluminación',
-        [InventoryItemCategory.KITCHEN]: 'Cocina',
-        [InventoryItemCategory.STATIONERY]: 'Papelería',
-        [InventoryItemCategory.DECORATION]: 'Decoración',
-        [InventoryItemCategory.OTHER]: 'Otros',
-    };
+    // Stats
+    const totalStock = items.reduce((acc, i) => acc + i.quantity, 0);
+    const lowStockCount = items.filter(i => i.quantity <= 2 && i.quantity > 0).length;
+    const uniqueCategories = new Set(items.map(i => i.category)).size;
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Inventario</h1>
-                    <p className="text-slate-500">Gestión de bienes y recursos físicos</p>
+                    <p className="text-slate-500 text-sm mt-0.5">Gestión de bienes y recursos físicos</p>
                 </div>
-                <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Nuevo Ítem
-                </Button>
+                {canEdit && (
+                    <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shrink-0">
+                        <Plus className="w-4 h-4" />
+                        Nuevo Ítem
+                    </Button>
+                )}
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            {/* Stats */}
+            <div className="grid gap-4 sm:grid-cols-3">
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-slate-500">Total Ítems</CardTitle>
@@ -103,97 +100,120 @@ export default function InventoryPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-500">Bienes Totales</CardTitle>
+                        <CardTitle className="text-sm font-medium text-slate-500">Unidades en Stock</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
-                            {items.reduce((acc, item) => acc + item.quantity, 0)}
-                        </div>
+                        <div className="text-2xl font-bold">{totalStock}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-500">Categorías</CardTitle>
+                        <CardTitle className="text-sm font-medium text-slate-500">
+                            Stock Bajo
+                            {lowStockCount > 0 && (
+                                <span className="ml-2 text-red-500">⚠</span>
+                            )}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
-                            {new Set(items.map(i => i.category)).size}
+                        <div className={`text-2xl font-bold ${lowStockCount > 0 ? 'text-red-500' : 'text-slate-800'}`}>
+                            {lowStockCount}
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="flex items-center gap-2 bg-white p-2 rounded-lg border max-w-sm">
-                <Search className="w-4 h-4 text-slate-400" />
-                <Input
-                    placeholder="Buscar por nombre o categoría..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-0 focus-visible:ring-0"
-                />
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                        placeholder="Buscar por nombre..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="pl-8"
+                    />
+                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                        <Layers className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="Categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas las categorías</SelectItem>
+                        {Object.values(InventoryItemCategory).map(cat => (
+                            <SelectItem key={cat} value={cat}>
+                                {INVENTORY_CATEGORY_LABELS[cat]}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {loading ? (
-                    Array(8).fill(0).map((_, i) => (
-                        <div key={i} className="h-[350px] bg-white rounded-xl border border-slate-200 animate-pulse bg-slate-100" />
+            {/* Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {isLoading ? (
+                    Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="h-[340px] rounded-xl border border-slate-200 bg-slate-100 animate-pulse" />
                     ))
                 ) : filteredItems.length === 0 ? (
                     <div className="col-span-full text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
                         <Package className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                        <h3 className="text-xl font-medium text-slate-600"> inventario vacío</h3>
-                        <p className="text-slate-400 mt-2">No se encontraron ítems con los filtros actuales.</p>
+                        <h3 className="text-lg font-medium text-slate-600">Inventario vacío</h3>
+                        <p className="text-slate-400 mt-1 text-sm">
+                            {search || categoryFilter !== 'all'
+                                ? 'No se encontraron ítems con los filtros actuales.'
+                                : canEdit ? 'Creá tu primer ítem usando el botón "Nuevo Ítem".' : 'No hay ítems registrados aún.'
+                            }
+                        </p>
                     </div>
                 ) : (
-                    filteredItems.map((item) => (
+                    filteredItems.map(item => (
                         <InventoryCard
                             key={item.id}
                             item={item}
+                            canEdit={canEdit}
+                            categoryLabel={INVENTORY_CATEGORY_LABELS[item.category] ?? item.category}
                             onMovement={handleMovement}
                             onHistory={handleHistory}
-                            categoryLabel={categoryLabels[item.category] || item.category}
                         />
                     ))
                 )}
             </div>
 
-            {/* Modals */}
+            {/* Create Item Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Nuevo Ítem de Inventario</DialogTitle>
                     </DialogHeader>
-                    <CreateItemForm onSuccess={() => {
-                        setIsCreateOpen(false);
-                        fetchItems();
-                    }} />
+                    <CreateItemForm onSuccess={() => setIsCreateOpen(false)} />
                 </DialogContent>
             </Dialog>
 
+            {/* Movement Dialog */}
             <Dialog open={isMovementOpen} onOpenChange={setIsMovementOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>
-                            {movementType === InventoryMovementType.IN ? 'Registrar Ingreso (Entrada)' : 'Registrar Egreso (Salida)'}
+                            {movementType === 'IN' ? '📦 Registrar Ingreso' : '📤 Registrar Egreso'}
                         </DialogTitle>
                     </DialogHeader>
-                    {selectedItem && movementType && (
+                    {selectedItem && (
                         <MovementForm
                             item={selectedItem}
                             type={movementType}
-                            onSuccess={() => {
-                                setIsMovementOpen(false);
-                                fetchItems();
-                            }}
+                            onSuccess={() => setIsMovementOpen(false)}
                         />
                     )}
                 </DialogContent>
             </Dialog>
 
+            {/* History Dialog */}
             <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Historial de Movimientos: {selectedItem?.name}</DialogTitle>
+                        <DialogTitle>Historial — {selectedItem?.name}</DialogTitle>
                     </DialogHeader>
                     {selectedItem && <MovementHistory item={selectedItem} />}
                 </DialogContent>

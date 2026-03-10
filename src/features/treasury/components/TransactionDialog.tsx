@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TreasuryAccountModel, TreasuryTransactionModel, AccountType } from '../types/treasury.types';
+import { TreasuryAccountModel, TreasuryTransactionModel, AccountType, TransactionType } from '../types/treasury.types';
 import { useAuth } from '@/context/AuthContext';
 import { useCreateTransaction } from '../hooks/useCreateTransaction';
 import { useUpdateTransaction } from '../hooks/useUpdateTransaction';
 import { useMinistries } from '../hooks/useMinistries';
-import { useCategories } from '../hooks/useCategories'; // NEW
+import { useCategories } from '../hooks/useCategories';
+import { useIsPeriodClosed } from '../hooks/usePeriods';
 
 interface TransactionDialogProps {
     open: boolean;
@@ -31,9 +32,13 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
 
     const isLoading = createHook.isLoading || updateHook.isLoading;
 
-    const [type, setType] = useState<'income' | 'expense' | 'transfer'>('income');
+    const dateToCheck = transactionToEdit ? new Date(transactionToEdit.date) : new Date();
+    const { isClosed: isPeriodClosed } = useIsPeriodClosed(churchId || '', dateToCheck.getFullYear(), dateToCheck.getMonth() + 1);
+
+    const [type, setType] = useState<TransactionType>(TransactionType.INCOME);
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
+    const [reason, setReason] = useState('');
 
     // Unified state for accounts/categories logic
     // Income: source = categoryId, dest = accountId
@@ -57,18 +62,18 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                 setDescription(transactionToEdit.description);
 
                 if (transactionToEdit.isIncome) {
-                    setType('income');
+                    setType(TransactionType.INCOME);
                     // For Income: source is Category, dest is Account
                     setSourceId(transactionToEdit.categoryId || '');
                     setDestId(transactionToEdit.destinationAccountId || '');
                 } else if (transactionToEdit.isExpense) {
-                    setType('expense');
+                    setType(TransactionType.EXPENSE);
                     // For Expense: source is Account, dest is Category
                     setSourceId(transactionToEdit.sourceAccountId || '');
                     setDestId(transactionToEdit.categoryId || '');
                     setMinistryId(transactionToEdit.ministryName ? 'found-by-name-fix-later' : 'none'); // TODO: Fix id binding
                 } else {
-                    setType('transfer');
+                    setType(TransactionType.TRANSFER);
                     setSourceId(transactionToEdit.sourceAccountId || '');
                     setDestId(transactionToEdit.destinationAccountId || '');
                     setExchangeRate(transactionToEdit.exchangeRate?.toString() || '1');
@@ -77,11 +82,12 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                 // Reset
                 setAmount('');
                 setDescription('');
+                setReason('');
                 setSourceId('');
                 setDestId('');
                 setExchangeRate('1');
                 setMinistryId('none');
-                setType('income');
+                setType(TransactionType.INCOME);
             }
         }
     }, [open, transactionToEdit]);
@@ -94,7 +100,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
         // For Income: dest is account
         // For Expense/Transfer: source is account
         let currency = 'ARS';
-        if (type === 'income') {
+        if (type === TransactionType.INCOME) {
             const destAcc = accounts.find(a => a.id === destId);
             if (destAcc) currency = destAcc.currency;
         } else {
@@ -107,10 +113,10 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
         let sourceAccountId: string | undefined;
         let destinationAccountId: string | undefined;
 
-        if (type === 'income') {
+        if (type === TransactionType.INCOME) {
             categoryId = sourceId;
             destinationAccountId = destId;
-        } else if (type === 'expense') {
+        } else if (type === TransactionType.EXPENSE) {
             sourceAccountId = sourceId;
             categoryId = destId;
         } else { // Transfer
@@ -120,6 +126,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
 
         const common = {
             churchId,
+            type,
             description,
             amount: parseFloat(amount),
             currency,
@@ -127,7 +134,8 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
             categoryId,
             sourceAccountId,
             destinationAccountId,
-            ministryId: (type === 'expense' && ministryId !== 'none') ? ministryId : undefined,
+            ministryId: (type === TransactionType.EXPENSE && ministryId !== 'none') ? ministryId : undefined,
+            reason: reason.trim() || undefined,
         };
 
         if (transactionToEdit) {
@@ -156,11 +164,16 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                 <DialogHeader>
                     <DialogTitle>{transactionToEdit ? 'Editar Transacción' : 'Nueva Transacción'}</DialogTitle>
                 </DialogHeader>
+                {isPeriodClosed && (
+                    <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-md text-sm">
+                        <strong>Período Cerrado:</strong> No se pueden crear ni editar transacciones en un mes contable cerrado.
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-3 gap-2">
-                        <Button type="button" variant={type === 'income' ? 'default' : 'outline'} onClick={() => setType('income')} disabled={!!transactionToEdit}>Ingreso</Button>
-                        <Button type="button" variant={type === 'expense' ? 'default' : 'outline'} onClick={() => setType('expense')} disabled={!!transactionToEdit}>Gasto</Button>
-                        <Button type="button" variant={type === 'transfer' ? 'default' : 'outline'} onClick={() => setType('transfer')} disabled={!!transactionToEdit}>Transfer</Button>
+                        <Button type="button" variant={type === TransactionType.INCOME ? 'default' : 'outline'} onClick={() => setType(TransactionType.INCOME)} disabled={!!transactionToEdit}>Ingreso</Button>
+                        <Button type="button" variant={type === TransactionType.EXPENSE ? 'default' : 'outline'} onClick={() => setType(TransactionType.EXPENSE)} disabled={!!transactionToEdit}>Gasto</Button>
+                        <Button type="button" variant={type === TransactionType.TRANSFER ? 'default' : 'outline'} onClick={() => setType(TransactionType.TRANSFER)} disabled={!!transactionToEdit}>Transfer</Button>
                     </div>
 
                     <div className="space-y-2">
@@ -174,7 +187,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                     </div>
 
                     {/* Dynamic Selects based on Type */}
-                    {type === 'income' && (
+                    {type === TransactionType.INCOME && (
                         <>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Categoría (Ingreso)</label>
@@ -196,7 +209,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                             </div>
                         </>
                     )}
-                    {type === 'expense' && (
+                    {type === TransactionType.EXPENSE && (
                         <>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Cuenta Origen</label>
@@ -235,7 +248,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                             </div>
                         </>
                     )}
-                    {type === 'transfer' && (
+                    {type === TransactionType.TRANSFER && (
                         <>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Cuenta Origen</label>
@@ -269,7 +282,12 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                         </>
                     )}
 
-                    <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Guardando...' : 'Guardar'}</Button>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Motivo / Razón (Opcional)</label>
+                        <Input value={reason} onChange={e => setReason(e.target.value)} placeholder="Agrega más contexto a la auditoría..." />
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={isLoading || isPeriodClosed}>{isLoading ? 'Guardando...' : 'Guardar'}</Button>
                 </form>
             </DialogContent>
         </Dialog>

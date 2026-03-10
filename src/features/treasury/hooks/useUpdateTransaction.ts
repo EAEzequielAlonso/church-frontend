@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
-import * as api from '../api/treasury.api';
+import { treasuryApi } from '@/app/(dashboard)/treasury/services/treasuryApi';
 import { UpdateTransactionDto } from '../types/treasury.types';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ export function useUpdateTransaction() {
     const execute = async (id: string, data: UpdateTransactionDto, onSuccess?: () => void) => {
         setIsLoading(true);
         try {
-            await api.updateTransaction(id, data);
+            await treasuryApi.transactions.update(id, data);
 
             mutate((key) => typeof key === 'string' && key.startsWith('/treasury/transactions'));
             mutate((key) => typeof key === 'string' && key.startsWith('/treasury/accounts'));

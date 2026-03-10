@@ -7,23 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, CalendarIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { ChurchMember } from "@/types/auth-types";
 import { format } from "date-fns";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { es } from "date-fns/locale";
+import { MinistryTask } from "@/types/ministry";
 
 interface CreateTaskDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     ministryId: string;
     onSuccess: () => void;
+    taskToEdit?: MinistryTask | null;
 }
 
-export function CreateTaskDialog({ open, onOpenChange, ministryId, onSuccess }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ open, onOpenChange, ministryId, onSuccess, taskToEdit }: CreateTaskDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [members, setMembers] = useState<any[]>([]);
     const [formData, setFormData] = useState({
@@ -36,14 +33,23 @@ export function CreateTaskDialog({ open, onOpenChange, ministryId, onSuccess }: 
     useEffect(() => {
         if (open) {
             fetchMinistryMembers();
-            setFormData({
-                title: '',
-                description: '',
-                assignedToId: 'none',
-                dueDate: undefined,
-            });
+            if (taskToEdit) {
+                setFormData({
+                    title: taskToEdit.title,
+                    description: taskToEdit.description || '',
+                    assignedToId: taskToEdit.assignedTo?.id || 'none',
+                    dueDate: taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : undefined
+                });
+            } else {
+                setFormData({
+                    title: '',
+                    description: '',
+                    assignedToId: 'none',
+                    dueDate: undefined,
+                });
+            }
         }
-    }, [open]);
+    }, [open, taskToEdit]);
 
     const fetchMinistryMembers = async () => {
         try {
@@ -79,8 +85,15 @@ export function CreateTaskDialog({ open, onOpenChange, ministryId, onSuccess }: 
                 payload.dueDate = formData.dueDate.toISOString();
             }
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ministries/${ministryId}/tasks`, {
-                method: 'POST',
+            const isEditing = !!taskToEdit;
+            const url = isEditing
+                ? `${process.env.NEXT_PUBLIC_API_URL}/ministries/${ministryId}/tasks/${taskToEdit.id}`
+                : `${process.env.NEXT_PUBLIC_API_URL}/ministries/${ministryId}/tasks`;
+
+            const method = isEditing ? 'PATCH' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -88,9 +101,9 @@ export function CreateTaskDialog({ open, onOpenChange, ministryId, onSuccess }: 
                 body: JSON.stringify(payload)
             });
 
-            if (!res.ok) throw new Error('Error al crear tarea');
+            if (!res.ok) throw new Error('Error al guardar tarea');
 
-            toast.success('Misión creada exitosamente');
+            toast.success(isEditing ? 'Misión actualizada exitosamente' : 'Misión creada exitosamente');
             onSuccess();
             onOpenChange(false);
         } catch (error) {
@@ -105,9 +118,11 @@ export function CreateTaskDialog({ open, onOpenChange, ministryId, onSuccess }: 
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px] rounded-3xl p-6">
                 <DialogHeader className="mb-4">
-                    <DialogTitle className="text-xl font-black text-slate-900 tracking-tight">Nueva Misión</DialogTitle>
+                    <DialogTitle className="text-xl font-black text-slate-900 tracking-tight">
+                        {taskToEdit ? 'Editar Misión' : 'Nueva Misión'}
+                    </DialogTitle>
                     <DialogDescription>
-                        Asigna una tarea o responsabilidad a un miembro del ministerio.
+                        {taskToEdit ? 'Modifica los detalles de la misión existente.' : 'Asigna una tarea o responsabilidad a un miembro del ministerio.'}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -162,7 +177,7 @@ export function CreateTaskDialog({ open, onOpenChange, ministryId, onSuccess }: 
                                 type="date"
                                 className="rounded-xl border-slate-200"
                                 value={formData.dueDate ? format(formData.dueDate, 'yyyy-MM-dd') : ''}
-                                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value ? new Date(e.target.value) : undefined })}
+                                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined })}
                             />
                         </div>
                     </div>
@@ -173,7 +188,7 @@ export function CreateTaskDialog({ open, onOpenChange, ministryId, onSuccess }: 
                         </Button>
                         <Button type="submit" className="rounded-xl font-bold gap-2" disabled={isLoading}>
                             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                            Crear Misión
+                            {taskToEdit ? 'Guardar Cambios' : 'Crear Misión'}
                         </Button>
                     </DialogFooter>
                 </form>

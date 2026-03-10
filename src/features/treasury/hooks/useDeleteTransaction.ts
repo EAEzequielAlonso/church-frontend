@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
-import * as api from '../api/treasury.api';
+import { treasuryApi } from '@/app/(dashboard)/treasury/services/treasuryApi';
 import { toast } from 'sonner';
 
 export function useDeleteTransaction() {
@@ -10,7 +10,7 @@ export function useDeleteTransaction() {
     const execute = async (id: string, onSuccess?: () => void) => {
         setIsLoading(true);
         try {
-            await api.deleteTransaction(id);
+            await treasuryApi.transactions.delete(id);
 
             mutate((key) => typeof key === 'string' && key.startsWith('/treasury/transactions'));
             mutate((key) => typeof key === 'string' && key.startsWith('/treasury/accounts'));

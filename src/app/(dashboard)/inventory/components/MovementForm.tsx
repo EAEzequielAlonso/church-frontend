@@ -4,28 +4,24 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { InventoryItem, InventoryMovementType } from '@/types/inventory';
-import { useState } from 'react';
-import api from '@/lib/api';
 import { Textarea } from '@/components/ui/textarea';
-
-const InReasons = [
-    { value: 'PURCHASE', label: 'Compra' },
-    { value: 'DONATION', label: 'Donación' },
-    { value: 'TRANSFER', label: 'Traslado' },
-    { value: 'ADJUSTMENT', label: 'Ajuste de Inventario' },
-    { value: 'RETURN', label: 'Devolución' },
-];
-
-const OutReasons = [
-    { value: 'BROKEN', label: 'Roto / Dañado' },
-    { value: 'LOST', label: 'Perdido / Robado' },
-    { value: 'DISCARDED', label: 'Descartado' },
-    { value: 'TRANSFER', label: 'Traslado' },
-    { value: 'ADJUSTMENT', label: 'Ajuste de Inventario' },
-    { value: 'LOAN', label: 'Préstamo' },
-];
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    InventoryItem,
+    InventoryMovementType,
+    InventoryReason,
+    INVENTORY_REASON_LABELS,
+    IN_REASONS,
+    OUT_REASONS,
+    RegisterMovementDto,
+} from '@/features/inventory/types/inventory.types';
+import { useInventoryMutations } from '@/features/inventory/hooks/useInventory';
 
 interface Props {
     item: InventoryItem;
@@ -34,70 +30,90 @@ interface Props {
 }
 
 export default function MovementForm({ item, type, onSuccess }: Props) {
-    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm();
-    const [loading, setLoading] = useState(false);
-    const quantity = watch('quantity');
+    const { register, handleSubmit, setValue, formState: { errors } } = useForm<RegisterMovementDto>();
+    const { registerMovement } = useInventoryMutations();
 
-    const onSubmit = async (data: any) => {
-        try {
-            setLoading(true);
-            await api.post('/inventory/movements', {
-                itemId: item.id,
-                type: type,
-                quantity: parseInt(data.quantity),
-                reason: data.reason,
-                observation: data.observation
-            });
-            onSuccess();
-        } catch (error) {
-            console.error(error);
-            alert('Error al registrar movimiento. Verifique el stock si es una salida.');
-        } finally {
-            setLoading(false);
-        }
+    const reasons = type === 'IN' ? IN_REASONS : OUT_REASONS;
+    const maxQty = type === 'OUT' ? item.quantity : undefined;
+
+    const onSubmit = async (data: RegisterMovementDto) => {
+        await registerMovement.mutateAsync({
+            itemId: item.id,
+            type,
+            quantity: Number(data.quantity),
+            reason: data.reason,
+            observation: data.observation,
+        });
+        onSuccess();
     };
-
-    const reasons = type === InventoryMovementType.IN ? InReasons : OutReasons;
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="p-3 bg-slate-50 rounded-lg border text-sm text-slate-600">
-                Ítem: <span className="font-semibold text-slate-900">{item.name}</span> <br />
-                Stock Actual: <span className="font-semibold text-slate-900">{item.quantity}</span>
+            {/* Context banner */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600">
+                <span className="font-semibold text-slate-900">{item.name}</span>
+                <span className="mx-2">·</span>
+                Stock actual: <span className="font-semibold text-slate-900">{item.quantity}</span>
             </div>
 
-            <div className="space-y-2">
-                <Label>Cantidad</Label>
-                <Input
-                    type="number"
-                    {...register('quantity', { required: true, min: 1, max: type === 'OUT' ? item.quantity : undefined })}
-                    placeholder="1"
-                    className={errors.quantity ? 'border-red-500' : ''}
-                />
-                {errors.quantity && <span className="text-xs text-red-500">Cantidad inválida</span>}
+            <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                    <Label>Cantidad *</Label>
+                    <Input
+                        type="number"
+                        min={1}
+                        max={maxQty}
+                        placeholder="1"
+                        {...register('quantity', {
+                            required: true,
+                            min: 1,
+                            ...(maxQty !== undefined && { max: maxQty }),
+                        })}
+                        className={errors.quantity ? 'border-red-400' : ''}
+                    />
+                    {errors.quantity && (
+                        <span className="text-xs text-red-500">
+                            {maxQty !== undefined ? `Máximo disponible: ${maxQty}` : 'Cantidad requerida'}
+                        </span>
+                    )}
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label>Motivo *</Label>
+                    <Select onValueChange={(v) => setValue('reason', v as InventoryReason)}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecciona..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {reasons.map(r => (
+                                <SelectItem key={r} value={r}>
+                                    {INVENTORY_REASON_LABELS[r]}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
-            <div className="space-y-2">
-                <Label>Motivo</Label>
-                <Select onValueChange={(val) => setValue('reason', val)} required>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Selecciona el motivo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {reasons.map((r) => (
-                            <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <div className="space-y-2">
+            <div className="space-y-1.5">
                 <Label>Observación (Opcional)</Label>
-                <Textarea {...register('observation')} placeholder="Detalles del movimiento..." />
+                <Textarea
+                    {...register('observation')}
+                    placeholder="Detalles adicionales..."
+                    rows={2}
+                />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading} variant={type === 'OUT' ? 'destructive' : 'default'}>
-                {loading ? 'Guardando...' : type === 'IN' ? 'Confirmar Ingreso' : 'Confirmar Egreso'}
+            <Button
+                type="submit"
+                className="w-full"
+                variant={type === 'OUT' ? 'destructive' : 'default'}
+                disabled={registerMovement.isPending}
+            >
+                {registerMovement.isPending
+                    ? 'Guardando...'
+                    : type === 'IN' ? 'Confirmar Ingreso' : 'Confirmar Egreso'
+                }
             </Button>
         </form>
     );

@@ -88,6 +88,7 @@ export function Sidebar() {
                         { name: 'Cuentas', href: '/treasury/accounts' },
                         { name: 'Reportes', href: '/treasury/reports' },
                         { name: 'Presupuestos', href: '/treasury/budgets' },
+                        { name: 'Auditoría', href: '/treasury/audit' },
                     ]
                 },
             ].filter(item => item.show ?? true)

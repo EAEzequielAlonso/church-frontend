@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateAccountDto, TreasuryAccountModel, AccountType } from "../types/treasury.types";
-import { useCreateAccount, useUpdateAccount } from "../hooks/useAccounts";
+import { useAccounts, useUpdateAccount } from "../hooks/useAccounts";
 import { useCategories } from "../hooks/useCategories"; // NEW
 import { Loader2 } from "lucide-react";
 
@@ -32,7 +32,7 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
         }
     });
 
-    const { execute: createAccount, isLoading: isCreating } = useCreateAccount();
+    const { createAccount, isLoading: isCreating } = useAccounts();
     const { execute: updateAccount, isLoading: isUpdating } = useUpdateAccount();
     const { createCategory, isLoading: isCreatingCategory } = useCategories(); // For category creation
 

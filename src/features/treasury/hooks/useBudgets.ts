@@ -1,33 +1,46 @@
-
-import useSWR, { mutate } from 'swr';
-import * as api from '../api/budget.api';
-import { useAuth } from '@/context/AuthContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { budgetApi } from '../api/budget.api';
 import { CreateBudgetDto } from '../types/budget.types';
-import { useState } from 'react';
 
-export function useBudgets(year?: number) {
-    const { churchId } = useAuth();
-    const key = churchId ? `/treasury/budgets?churchId=${churchId}&year=${year || new Date().getFullYear()}` : null;
+export const budgetKeys = {
+    all: ['budgets'] as const,
+    lists: (churchId: string) => [...budgetKeys.all, churchId] as const,
+    list: (churchId: string, year?: number, month?: number) => [...budgetKeys.lists(churchId), { year, month }] as const,
+};
 
-    const { data, error, isLoading, mutate: reload } = useSWR(key, () => api.getBudgets(churchId!, year));
+export function useBudgets(churchId: string, year?: number, month?: number) {
+    const queryClient = useQueryClient();
 
-    const create = async (dto: Omit<CreateBudgetDto, 'churchId'>) => {
-        if (!churchId) return;
-        await api.createBudget({ ...dto, churchId });
-        reload();
-    };
+    const query = useQuery({
+        queryKey: budgetKeys.list(churchId, year, month),
+        queryFn: () => budgetApi.getAll(churchId, year, month),
+        enabled: !!churchId,
+    });
 
-    const remove = async (id: string) => {
-        await api.deleteBudget(id);
-        reload();
-    };
+    const createMutation = useMutation({
+        mutationFn: (data: CreateBudgetDto) => budgetApi.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: budgetKeys.lists(churchId) });
+            queryClient.invalidateQueries({ queryKey: ['budgetExecution', churchId] });
+        },
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => budgetApi.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: budgetKeys.lists(churchId) });
+            queryClient.invalidateQueries({ queryKey: ['budgetExecution', churchId] });
+        },
+    });
 
     return {
-        budgets: data || [],
-        isLoading,
-        error,
-        create,
-        remove,
-        reload
+        budgets: query.data || [],
+        isLoading: query.isLoading,
+        error: query.error,
+        refetch: query.refetch,
+        createBudget: createMutation.mutateAsync,
+        isCreating: createMutation.isPending,
+        deleteBudget: deleteMutation.mutateAsync,
+        isDeleting: deleteMutation.isPending,
     };
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
-import * as api from '../api/treasury.api';
+import { treasuryApi } from '@/app/(dashboard)/treasury/services/treasuryApi';
 import { CreateTransactionDto } from '../types/treasury.types';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ export function useCreateTransaction() {
     const execute = async (data: CreateTransactionDto, onSuccess?: () => void) => {
         setIsLoading(true);
         try {
-            await api.createTransaction(data);
+            await treasuryApi.transactions.create(data);
 
             // Invalidate cache
             mutate((key) => typeof key === 'string' && key.startsWith('/treasury/transactions'));

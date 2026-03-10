@@ -1,5 +1,0 @@
-src/modules/mentorship/components/MentorshipWizard.tsx(106,48): error TS2339: Property 'fullName' does not exist on type 'ChurchPersonDto'.
-src/modules/mentorship/components/MentorshipWizard.tsx(287,58): error TS2339: Property 'fullName' does not exist on type 'ChurchPersonDto'.
-src/modules/mentorship/components/MentorshipWizard.tsx(288,97): error TS2339: Property 'documentId' does not exist on type 'ChurchPersonDto'.
-src/modules/mentorship/components/MentorshipWizard.tsx(321,58): error TS2339: Property 'fullName' does not exist on type 'ChurchPersonDto'.
-src/modules/mentorship/components/MentorshipWizard.tsx(322,97): error TS2339: Property 'documentId' does not exist on type 'ChurchPersonDto'.

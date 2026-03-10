@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -22,9 +22,11 @@ export function EditMemberRoleDialog({ open, onOpenChange, ministryId, member, o
     const [role, setRole] = useState<MinistryRole>(member?.roleInMinistry || MinistryRole.TEAM_MEMBER);
 
     // Update role state when member changes
-    if (member && member.roleInMinistry !== role && !isLoading) {
-        setRole(member.roleInMinistry);
-    }
+    useEffect(() => {
+        if (member && open) {
+            setRole(member.roleInMinistry);
+        }
+    }, [member, open]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

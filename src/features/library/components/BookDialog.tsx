@@ -79,15 +79,18 @@ export function BookDialog({ open, onOpenChange, categories, bookToEdit }: BookD
 
     const onSubmit = async (data: BookFormValues) => {
         // Build clean payload — no isChurchOwned, only ownershipType
-        const cleanData = {
+        const cleanData: any = {
             title: data.title,
             author: data.author,
             categoryId: data.categoryId,
             description: data.description || undefined,
             isbn: data.isbn || undefined,
             coverUrl: data.coverUrl || undefined,
-            ownershipType: data.ownershipType,
         };
+
+        if (!bookToEdit) {
+            cleanData.ownershipType = data.ownershipType;
+        }
 
         try {
             if (bookToEdit) {

@@ -1,22 +1,55 @@
-import { MinistryModel } from './ministry.types';
-import { TreasuryAccountModel } from './treasury.types';
+export enum BudgetLineType {
+    INCOME = 'INCOME',
+    EXPENSE = 'EXPENSE'
+}
+
+export interface BudgetLine {
+    id: string;
+    budgetId: string;
+    type: BudgetLineType;
+    ministryId?: string | null;
+    categoryId?: string | null;
+    budgetedAmount: number;
+}
 
 export interface BudgetModel {
     id: string;
-    ministry?: MinistryModel;
-    category?: TreasuryAccountModel;
-    amountLimit: number;
-    period: 'monthly' | 'yearly' | 'event';
+    churchId: string;
     year: number;
+    month: number;
+    projectedIncomeTotal: number;
+    notes?: string | null;
+    createdAt?: string;
+    lines: BudgetLine[];
 }
+
+export enum BudgetExecutionStatus {
+    OK = 'OK',
+    WARNING_80 = 'WARNING_80',
+    EXCEEDED = 'EXCEEDED'
+}
+
+export interface BudgetExecutionLine {
+    type: BudgetLineType;
+    ministryId?: string | null;
+    categoryId?: string | null;
+    budgetedAmount: number;
+    executedAmount: number;
+    status: BudgetExecutionStatus;
+}
+
+export type BudgetExecutionResponse = BudgetExecutionLine[];
 
 export interface CreateBudgetDto {
-    ministryId?: string;
-    categoryId?: string;
-    amountLimit: number;
-    period: 'monthly' | 'yearly';
-    year: number;
     churchId: string;
+    year: number;
+    month: number;
+    projectedIncomeTotal: number;
+    notes?: string;
+    lines: Array<{
+        type: BudgetLineType;
+        ministryId?: string | null;
+        categoryId?: string | null;
+        budgetedAmount: number;
+    }>;
 }
-
-export interface UpdateBudgetDto extends Partial<CreateBudgetDto> { }

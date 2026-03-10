@@ -11,21 +11,63 @@ import { Button } from "@/components/ui/button";
 import { TreasuryTransactionModel } from "../types/treasury.types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowDownRight, ArrowUpRight, Edit2, Eye, Trash2, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Edit2, Eye, Trash2, Wallet, Undo2 } from "lucide-react";
 import { useState } from "react";
 import { TransactionHistoryDialog } from "./TransactionHistoryDialog";
+import { usePeriods, useIsPeriodClosed } from "../hooks/usePeriods";
+import { useAuth } from "@/context/AuthContext";
 
 interface TransactionsTableProps {
     transactions: TreasuryTransactionModel[];
     onEdit?: (tx: TreasuryTransactionModel) => void;
     onDelete?: (id: string) => void;
+    onCorrect?: (tx: TreasuryTransactionModel) => void;
     canEdit: boolean;
     page: number;
     totalPages: number;
     onPageChange: (page: number) => void;
 }
 
-export function TransactionsTable({ transactions, onEdit, onDelete, canEdit, page, totalPages, onPageChange }: TransactionsTableProps) {
+// Subcomponente para evaluar bloqueo individual de cada fila según su mes
+function TransactionRowActions({ tx, canEdit, onEdit, onCorrect, onHistory }: any) {
+    const { churchId } = useAuth();
+    const date = new Date(tx.date);
+    const { isClosed } = useIsPeriodClosed(churchId || '', date.getFullYear(), date.getMonth() + 1);
+
+    return (
+        <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" onClick={() => onHistory(tx.id)} title="Ver Historial">
+                <Eye className="w-4 h-4" />
+            </Button>
+            {canEdit && !tx.isCorrection && !tx.reversalId && (
+                <>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-400 hover:text-amber-600"
+                        onClick={() => onCorrect?.(tx)}
+                        title={isClosed ? "Período cerrado" : "Corregir"}
+                        disabled={isClosed}
+                    >
+                        <Undo2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-400 hover:text-primary"
+                        onClick={() => onEdit?.(tx)}
+                        title={isClosed ? "Período cerrado" : "Editar"}
+                        disabled={isClosed}
+                    >
+                        <Edit2 className="w-4 h-4" />
+                    </Button>
+                </>
+            )}
+        </div>
+    );
+}
+
+export function TransactionsTable({ transactions, onEdit, onDelete, onCorrect, canEdit, page, totalPages, onPageChange }: TransactionsTableProps) {
     const [historyTxId, setHistoryTxId] = useState<string | null>(null);
 
     const getIcon = (tx: TreasuryTransactionModel) => {
@@ -71,36 +113,51 @@ export function TransactionsTable({ transactions, onEdit, onDelete, canEdit, pag
                                 </TableCell>
                                 <TableCell className="font-medium text-slate-700">
                                     {format(new Date(tx.date), "dd/MM/yyyy")}
+                                    {tx.isCorrection && (
+                                        <div className="text-[10px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded w-fit mt-1">Corrección</div>
+                                    )}
                                 </TableCell>
-                                <TableCell className="max-w-[250px] truncate text-slate-600" title={tx.description}>
-                                    {tx.description}
+                                <TableCell className="max-w-[250px]">
+                                    <div className="truncate text-slate-600 font-medium" title={tx.description}>
+                                        {tx.description}
+                                    </div>
+                                    {tx.ministryName && (
+                                        <div className="text-xs text-slate-400 mt-0.5" title={tx.ministryName}>
+                                            Min: {tx.ministryName}
+                                        </div>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    {tx.categoryName ? (
+                                        <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: `${tx.categoryColor || '#e2e8f0'}30`, color: tx.categoryColor || '#475569' }}>
+                                            {tx.categoryName}
+                                        </span>
+                                    ) : (
+                                        <span className="text-slate-500">{tx.sourceAccountName || '-'}</span>
+                                    )}
                                 </TableCell>
                                 <TableCell className="text-slate-500">
-                                    {tx.isIncome ? (tx.categoryName || '-') : (tx.sourceAccountName || '-')}
+                                    {!tx.isExpense && !tx.isIncome ? tx.destinationAccountName : (tx.isExpense ? tx.sourceAccountName : tx.destinationAccountName)}
                                 </TableCell>
-                                <TableCell className="text-slate-500">
-                                    {tx.isExpense ? (tx.categoryName || '-') : (tx.destinationAccountName || '-')}
-                                </TableCell>
-                                <TableCell className={`text-right font-bold ${getAmountColor(tx)}`}>
-                                    {tx.isIncome ? '+' : tx.isExpense ? '-' : ''}
-                                    {new Intl.NumberFormat('es-AR', { style: 'currency', currency: tx.currency }).format(tx.amount)}
+                                <TableCell className={`text-right ${getAmountColor(tx)}`}>
+                                    <div className="font-bold">
+                                        {tx.isIncome ? '+' : tx.isExpense ? '-' : ''}
+                                        {new Intl.NumberFormat('es-AR', { style: 'currency', currency: tx.currency }).format(tx.amount)}
+                                    </div>
+                                    {tx.currency !== tx.baseCurrency && (
+                                        <div className="text-xs opacity-70 mt-0.5 font-medium">
+                                            ≈ {new Intl.NumberFormat('es-AR', { style: 'currency', currency: tx.baseCurrency }).format(tx.amountBaseCurrency)}
+                                        </div>
+                                    )}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <div className="flex justify-end gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" onClick={() => setHistoryTxId(tx.id)} title="Ver Historial">
-                                            <Eye className="w-4 h-4" />
-                                        </Button>
-                                        {canEdit && (
-                                            <>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-primary" onClick={() => onEdit?.(tx)}>
-                                                    <Edit2 className="w-4 h-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-600" onClick={() => onDelete?.(tx.id)}>
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            </>
-                                        )}
-                                    </div>
+                                    <TransactionRowActions
+                                        tx={tx}
+                                        canEdit={canEdit}
+                                        onEdit={onEdit}
+                                        onCorrect={onCorrect}
+                                        onHistory={setHistoryTxId}
+                                    />
                                 </TableCell>
                             </TableRow>
                         ))

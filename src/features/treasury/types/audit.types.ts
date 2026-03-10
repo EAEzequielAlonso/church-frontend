@@ -1,18 +1,37 @@
+import { AuditAction, AuditEntityType } from './treasury.types';
 
-export interface TreasuryAuditLogModel {
+export interface AuditLogDto {
     id: string;
-    createdAt: string; // ISO
-    oldAmount: number;
-    newAmount: number;
-    oldDescription: string;
-    newDescription: string;
-    changeReason: string;
-    changedBy?: {
-        id: string;
-        email: string;
-        person?: {
-            firstName: string;
-            lastName: string;
-        };
-    };
+    churchId: string;
+    entityType: AuditEntityType;
+    entityId: string;
+    action: AuditAction;
+    before?: any;
+    after?: any;
+    entityVersion: string;
+    performedByUserId: string;
+    performedByEmail?: string;
+    performedByRole?: string;
+    ipAddress?: string;
+    reason?: string;
+    createdAt: string;
 }
+
+export interface GetAuditLogsParams {
+    startDate?: string;
+    endDate?: string;
+    entityType?: AuditEntityType | string;
+    action?: AuditAction | string;
+    userId?: string;
+    entityId?: string;
+    limit?: number;
+    page?: number;
+}
+
+export interface AuditLogPaginatedResponse {
+    data: AuditLogDto[];
+    total: number;
+    limit: number;
+    offset: number;
+}
+

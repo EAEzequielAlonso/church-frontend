@@ -3,7 +3,7 @@ import { GroupParticipantDto, GroupType, GroupRole } from '../types/group.types'
 import { getGroupTypeConfig } from '../config/group-type.config';
 import { useGroupMutations } from '../hooks/useGroupMutations';
 import { Button } from '@/components/ui/button';
-import { UserMinus, UserCheck, Shield } from 'lucide-react';
+import { Edit2, Save, X, UserMinus, UserCheck, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 import { AddParticipantDialog } from './AddParticipantDialog';
 import {
@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MembershipStatus } from '@/types/auth-types';
+import { ROLE_UI_METADATA } from '@/constants/role-ui';
 
 interface GroupParticipantsProps {
     participants: GroupParticipantDto[];
@@ -27,9 +30,11 @@ interface GroupParticipantsProps {
 
 export function GroupParticipants({ participants, groupId, isAdminOrAuditor, refetch, groupType }: GroupParticipantsProps) {
     const config = getGroupTypeConfig(groupType);
-    const { disenroll, addParticipant } = useGroupMutations();
+    const { disenroll, addParticipant, updateRole } = useGroupMutations();
     const [removingId, setRemovingId] = useState<string | null>(null);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
+    const [editingRole, setEditingRole] = useState<GroupRole>('PARTICIPANT');
 
     const handleAdd = async (churchPersonId: string, role: GroupRole) => {
         await addParticipant(groupId, churchPersonId, role);
@@ -47,16 +52,31 @@ export function GroupParticipants({ participants, groupId, isAdminOrAuditor, ref
         }
     };
 
+    const handleStartEdit = (personId: string, currentRole: GroupRole) => {
+        setEditingPersonId(personId);
+        setEditingRole(currentRole);
+    };
+
+    const handleSaveRole = async (personId: string) => {
+        setEditingPersonId(null);
+        await updateRole(groupId, personId, editingRole);
+        refetch();
+    };
+
+    const handleCancelEdit = () => {
+        setEditingPersonId(null);
+    };
+
     const getRoleBadge = (role: GroupRole) => {
         switch (role) {
-            case 'LEADER':
-                return <Badge variant="default" className="bg-amber-500 hover:bg-amber-600"><Shield className="w-3 h-3 mr-1" /> Líder</Badge>;
-            case 'CO_LEADER':
-                return <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-200">Co-Líder</Badge>;
-            case 'MEMBER':
+            case 'COORDINATOR':
+                return <Badge variant="default" className="bg-amber-500 hover:bg-amber-600"><Shield className="w-3 h-3 mr-1" /> Coordinador</Badge>;
+            case 'TEACHER':
+                return <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-200">Maestro</Badge>;
+            case 'PARTICIPANT':
                 return <Badge variant="outline" className="bg-blue-50 text-blue-700">Participante</Badge>;
-            case 'GUEST':
-                return <Badge variant="outline" className="bg-slate-50 text-slate-700">Invitado</Badge>;
+            default:
+                return <Badge variant="outline" className="bg-slate-50 text-slate-700">{role}</Badge>;
         }
     };
 
@@ -111,24 +131,72 @@ export function GroupParticipants({ participants, groupId, isAdminOrAuditor, ref
                                         </div>
                                     </div>
                                 </TableCell>
-                                <TableCell>{getRoleBadge(p.role)}</TableCell>
                                 <TableCell>
-                                    <span className="text-sm text-slate-600">{p.churchPerson.membershipStatus}</span>
+                                    {editingPersonId === p.churchPerson.id ? (
+                                        <Select value={editingRole} onValueChange={(val) => setEditingRole(val as GroupRole)}>
+                                            <SelectTrigger className="h-8 w-32 border-slate-300">
+                                                <SelectValue placeholder="Rol" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="COORDINATOR">Coordinador</SelectItem>
+                                                <SelectItem value="TEACHER">Maestro</SelectItem>
+                                                <SelectItem value="PARTICIPANT">Participante</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        getRoleBadge(p.role)
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <span className="text-sm text-slate-600">
+                                        {ROLE_UI_METADATA[p.churchPerson.membershipStatus as MembershipStatus]?.label || p.churchPerson.membershipStatus}
+                                    </span>
                                 </TableCell>
                                 <TableCell className="text-sm text-slate-600">
                                     {format(new Date(p.joinedAt), 'dd/MM/yyyy')}
                                 </TableCell>
                                 {isAdminOrAuditor && (
                                     <TableCell className="text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                            onClick={() => handleRemove(p.churchPerson.id)}
-                                            disabled={removingId === p.churchPerson.id}
-                                        >
-                                            <UserMinus className="w-4 h-4" />
-                                        </Button>
+                                        {editingPersonId === p.churchPerson.id ? (
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 w-8 p-0"
+                                                    onClick={() => handleSaveRole(p.churchPerson.id)}
+                                                >
+                                                    <Save className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 h-8 w-8 p-0"
+                                                    onClick={handleCancelEdit}
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 h-8 w-8 p-0"
+                                                    onClick={() => handleStartEdit(p.churchPerson.id, p.role)}
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                                                    onClick={() => handleRemove(p.churchPerson.id)}
+                                                    disabled={removingId === p.churchPerson.id}
+                                                >
+                                                    <UserMinus className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        )}
                                     </TableCell>
                                 )}
                             </TableRow>

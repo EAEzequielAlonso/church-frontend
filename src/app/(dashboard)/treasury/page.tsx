@@ -7,15 +7,16 @@ import { useAccounts, useDeleteAccount } from '@/features/treasury/hooks/useAcco
 import { useDeleteTransaction } from '@/features/treasury/hooks/useDeleteTransaction';
 import { useCategories } from '@/features/treasury/hooks/useCategories'; // NEW
 
-import { TransactionsList } from '@/features/treasury/components/TransactionsList'; // Keep for now if needed or remove
 import { AccountsList } from '@/features/treasury/components/AccountsList';
 import { CategoriesList } from '@/features/treasury/components/CategoriesList';
 import { TransactionDialog } from '@/features/treasury/components/TransactionDialog';
 import { AccountDialog } from '@/features/treasury/components/AccountDialog';
-import { AccountBalanceCards } from '@/features/treasury/components/AccountBalanceCards'; // NEW
-import { TransactionsFilter } from '@/features/treasury/components/TransactionsFilter'; // NEW
-import { TransactionsTable } from '@/features/treasury/components/TransactionsTable'; // NEW
-import { BudgetDashboard } from '@/features/budget/components/BudgetDashboard';
+import { AccountBalanceCards } from '@/features/treasury/components/AccountBalanceCards';
+import { TransactionsFilter } from '@/features/treasury/components/TransactionsFilter';
+import { TransactionsTable } from '@/features/treasury/components/TransactionsTable';
+import { CorrectionDialog } from '@/features/treasury/components/CorrectionDialog'; // NEW
+import { BudgetsTab } from '@/features/treasury/components/BudgetsTab';
+import { PeriodsTab } from '@/features/treasury/components/PeriodsTab';
 import { isSameMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -23,15 +24,12 @@ import { TreasuryTransactionModel, TreasuryAccountModel, TransactionCategory } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { TreasuryReports } from '@/features/treasury/components/TreasuryReports';
-
-import { TransactionFilters } from '@/features/treasury/api/treasury.api';
 
 export default function TreasuryPage() {
 
     // Filter State
     const [showTrash, setShowTrash] = useState(false);
-    const [filters, setFilters] = useState<TransactionFilters>({
+    const [filters, setFilters] = useState<any>({
         startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // Start of month
         endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), // End of month
     });
@@ -51,7 +49,9 @@ export default function TreasuryPage() {
 
     // State
     const [isTxDialogOpen, setIsTxDialogOpen] = useState(false);
+    const [isCorrectionDialogOpen, setIsCorrectionDialogOpen] = useState(false); // NEW
     const [editingTx, setEditingTx] = useState<TreasuryTransactionModel | null>(null);
+    const [correctingTx, setCorrectingTx] = useState<TreasuryTransactionModel | null>(null); // NEW
     const [isAccDialogOpen, setIsAccDialogOpen] = useState(false);
     const [editingAcc, setEditingAcc] = useState<TreasuryAccountModel | null>(null);
     const [editingCategory, setEditingCategory] = useState<TransactionCategory | null>(null); // NEW
@@ -62,6 +62,11 @@ export default function TreasuryPage() {
     const handleEditTx = (tx: TreasuryTransactionModel) => {
         setEditingTx(tx);
         setIsTxDialogOpen(true);
+    };
+
+    const handleCorrectTx = (tx: TreasuryTransactionModel) => { // NEW
+        setCorrectingTx(tx);
+        setIsCorrectionDialogOpen(true);
     };
 
     const handleDeleteTx = async (id: string) => {
@@ -118,8 +123,9 @@ export default function TreasuryPage() {
                 <TabsList>
                     <TabsTrigger value="overview">Resumen</TabsTrigger>
                     <TabsTrigger value="accounts">Cuentas y Categorías</TabsTrigger>
-                    <TabsTrigger value="budgets">Presupuestos</TabsTrigger>
-                    <TabsTrigger value="reports">Reportes</TabsTrigger>
+                    <TabsTrigger value="budgets" className="text-emerald-700">Presupuestos</TabsTrigger>
+                    <TabsTrigger value="periods" className="text-blue-700">Cierre Mensual</TabsTrigger>
+                    <TabsTrigger value="reports" disabled>Reportes (Próximamente)</TabsTrigger>
                 </TabsList>
             </div>
 
@@ -159,7 +165,7 @@ export default function TreasuryPage() {
                             accounts={accounts}
                             initialFilters={filters as any} // Cast to avoid strict type mismatch for now
                             onFilterChange={(criteria) => {
-                                setFilters(prev => ({ ...prev, ...criteria }));
+                                setFilters((prev: any) => ({ ...prev, ...criteria }));
                             }}
                         />
                     </div>
@@ -174,6 +180,7 @@ export default function TreasuryPage() {
                         transactions={displayedTransactions}
                         onEdit={handleEditTx}
                         onDelete={handleDeleteTx}
+                        onCorrect={handleCorrectTx}
                         canEdit={canEdit && !showTrash}
                         page={filters.page || 1}
                         totalPages={useTransactions({ ...filters, deleted: showTrash }).meta?.lastPage || 1}
@@ -240,11 +247,11 @@ export default function TreasuryPage() {
             </TabsContent>
 
             <TabsContent value="budgets" className="space-y-4">
-                <BudgetDashboard />
+                <BudgetsTab />
             </TabsContent>
 
-            <TabsContent value="reports" className="space-y-4">
-                <TreasuryReports transactions={displayedTransactions} />
+            <TabsContent value="periods" className="space-y-4">
+                <PeriodsTab />
             </TabsContent>
 
             {/* Dialogs Global */}
@@ -257,6 +264,12 @@ export default function TreasuryPage() {
                             accounts={accounts}
                             transactionToEdit={editingTx}
                             onSuccess={() => setIsTxDialogOpen(false)}
+                        />
+                        <CorrectionDialog
+                            open={isCorrectionDialogOpen}
+                            onOpenChange={setIsCorrectionDialogOpen}
+                            transactionToCorrect={correctingTx}
+                            onSuccess={() => setIsCorrectionDialogOpen(false)}
                         />
                         <AccountDialog
                             open={isAccDialogOpen}

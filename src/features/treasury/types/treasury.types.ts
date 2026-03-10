@@ -4,6 +4,29 @@ export enum TransactionStatus {
     REJECTED = 'rejected'
 }
 
+export enum TransactionType {
+    INCOME = 'INCOME',
+    EXPENSE = 'EXPENSE',
+    TRANSFER = 'TRANSFER'
+}
+
+export enum AuditEntityType {
+    TRANSACTION = 'TRANSACTION',
+    ACCOUNT = 'ACCOUNT',
+    PERIOD = 'PERIOD',
+    BUDGET = 'BUDGET',
+}
+
+export enum AuditAction {
+    CREATE = 'CREATE',
+    UPDATE = 'UPDATE',
+    DELETE = 'DELETE',
+    CORRECT = 'CORRECT',
+    CLOSE_PERIOD = 'CLOSE_PERIOD',
+    REOPEN_PERIOD = 'REOPEN_PERIOD',
+}
+
+
 export enum AccountType {
     ASSET = 'asset',
     LIABILITY = 'liability',
@@ -52,24 +75,31 @@ export interface TreasuryTransactionDto {
     amount: number; // string/decimal
     currency: string;
     exchangeRate: number;
+    baseCurrency: string;
+    amountBaseCurrency: number;
     status: TransactionStatus;
+    type: TransactionType;
     sourceAccount?: TreasuryAccountDto;
     destinationAccount?: TreasuryAccountDto;
     category?: TransactionCategory;
     ministry?: MinistryDto;
     createdById?: string;
     deletedAt?: string;
+    reversalId?: string;
+    correctionId?: string;
+    isCorrection?: boolean;
 }
 
 // --- Payload DTOs ---
 
 export interface CreateTransactionDto {
     churchId: string;
+    type: TransactionType;
     description: string;
     amount: number;
     currency?: string;
     exchangeRate?: number;
-    categoryId?: string; // NEW: Replaces source/dest for income/expense
+    categoryId?: string;
     sourceAccountId?: string;
     destinationAccountId?: string;
     ministryId?: string | null;
@@ -80,6 +110,7 @@ export interface UpdateTransactionDto {
     id: string;
     churchId: string;
     userId: string;
+    type?: TransactionType;
     description?: string;
     amount?: number;
     categoryId?: string; // NEW
@@ -118,10 +149,13 @@ export interface TreasuryTransactionModel {
     amount: number;
     currency: string;
     exchangeRate: number;
+    baseCurrency: string;
+    amountBaseCurrency: number;
     status: TransactionStatus;
-    categoryId?: string; // NEW
-    categoryName?: string; // NEW
-    categoryColor?: string; // NEW
+    type: TransactionType;
+    categoryId?: string;
+    categoryName?: string;
+    categoryColor?: string;
     sourceAccountId?: string;
     destinationAccountId?: string;
     sourceAccountName: string;
@@ -132,6 +166,9 @@ export interface TreasuryTransactionModel {
     isTransfer: boolean;
     displayAmount: string;
     deletedAt?: Date;
+    reversalId?: string;
+    correctionId?: string;
+    isCorrection?: boolean;
 }
 
 export interface TreasuryAccountModel {

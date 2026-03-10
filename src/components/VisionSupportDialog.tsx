@@ -61,35 +61,35 @@ export function VisionSupportDialog({ open, onOpenChange }: VisionSupportDialogP
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md border-none shadow-2xl bg-white p-0 overflow-hidden">
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-6 text-white text-center relative overflow-hidden">
+            <DialogContent className="sm:max-w-md border-none shadow-2xl bg-[#0f1014] p-0 overflow-hidden rounded-3xl">
+                <div className="bg-gradient-to-br from-[#7f1d1d] to-[#450a0a] p-8 text-white text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('/pattern.png')] bg-repeat"></div>
                     <div className="relative z-10 flex flex-col items-center">
-                        <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 shadow-lg">
-                            <Heart className="w-6 h-6 text-white" fill="currentColor" />
+                        <div className="w-14 h-14 bg-[#fbbf24]/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-5 shadow-2xl border border-[#fbbf24]/30">
+                            <Heart className="w-7 h-7 text-[#fbbf24]" fill="currentColor" />
                         </div>
-                        <DialogTitle className="text-xl font-bold tracking-tight mb-2">Apoyo a la Visión</DialogTitle>
-                        <DialogDescription className="text-indigo-100 font-medium max-w-xs mx-auto">
-                            Tu aporte voluntario nos ayuda a mantener y mejorar Ecclesia SaaS para servir mejor a tu ministerio.
+                        <DialogTitle className="text-2xl font-black tracking-tight mb-2 text-white">Apoyo a la Visión</DialogTitle>
+                        <DialogDescription className="text-white/80 font-medium max-w-sm mx-auto leading-relaxed">
+                            Tu aporte voluntario nos ayuda a mantener y mejorar Ecclesia SaaS para servir mejor a la iglesia del Señor.
                         </DialogDescription>
                     </div>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-8 space-y-8 bg-zinc-950">
                     {/* Presets removed as requested */}
 
                     <div className="space-y-4">
-                        <label className="text-sm font-medium text-slate-700">Ingresa el monto que desees aportar:</label>
+                        <label className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Ingresa el monto que desees aportar</label>
                         <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="text-slate-400 font-bold">$</span>
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span className="text-[#fbbf24] font-bold text-lg">$</span>
                             </div>
                             <Input
                                 type="number"
                                 placeholder="Ej: 10000"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
-                                className="pl-8 h-12 bg-slate-50 border-slate-200 focus:ring-indigo-500/20 text-lg font-bold text-slate-800"
+                                className="pl-10 h-14 bg-zinc-900/50 border-zinc-800 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/50 text-xl font-black text-white placeholder:text-zinc-600 rounded-2xl transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </div>
                     </div>
@@ -97,17 +97,17 @@ export function VisionSupportDialog({ open, onOpenChange }: VisionSupportDialogP
                     <Button
                         onClick={handleDonate}
                         disabled={loading || !amount}
-                        className="w-full h-12 bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98]"
+                        className="w-full h-14 bg-gradient-to-r from-[#fbbf24] to-[#f59e0b] hover:from-[#f59e0b] hover:to-[#fbbf24] text-black font-black text-lg rounded-2xl shadow-xl shadow-[#fbbf24]/10 transition-all active:scale-[0.98] border border-[#fbbf24]/50"
                     >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                        {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
                             <>
-                                <CreditCard className="w-5 h-5 mr-2" />
+                                <CreditCard className="w-6 h-6 mr-3" />
                                 Donar con Mercado Pago
                             </>
                         )}
                     </Button>
 
-                    <p className="text-center text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                    <p className="text-center text-[11px] text-zinc-500 font-bold uppercase tracking-widest mt-6">
                         Pagos seguros procesados por Mercado Pago
                     </p>
                 </div>

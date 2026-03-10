@@ -1,5 +1,7 @@
+import { FunctionalRole } from "@/types/auth-types";
+
 export type GroupType = 'SMALL_GROUP' | 'COURSE' | 'ACTIVITY' | 'DISCIPLESHIP' | 'MINISTRY_TEAM';
-export type GroupRole = 'LEADER' | 'CO_LEADER' | 'MEMBER' | 'GUEST';
+export type GroupRole = 'COORDINATOR' | 'TEACHER' | 'PARTICIPANT';
 export type GroupVisibility = 'PUBLIC' | 'PRIVATE';
 
 export interface GroupDto {
@@ -35,6 +37,7 @@ export interface ChurchPersonDto {
         user?: { id: string };
     };
     membershipStatus: string;
+    functionalRoles: FunctionalRole[]; // Added to fix mentorship wizard compilation
 }
 
 export interface GroupParticipantDto {

@@ -18,9 +18,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { useMinistryPermissions } from '@/hooks/useMinistryPermissions';
 
 export default function MinistrySchedulePage() {
     const { id: ministryId } = useParams();
+    const { user } = useAuth();
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
     const [selectedWeekday, setSelectedWeekday] = useState<string>('0'); // Default Sunday
     const [selectedCell, setSelectedCell] = useState<{ date: Date, roleId: string, currentAssignment?: any } | null>(null);
@@ -38,6 +41,7 @@ export default function MinistrySchedulePage() {
     // Fetch Data
     const { data: ministry } = useSWR(`/ministries/${ministryId}`, url => api.get(url).then(r => r.data));
     const { data: duties } = useSWR(`/ministries/${ministryId}/duties`, url => api.get(url).then(r => r.data));
+    const { isLeaderOrCoordinator } = useMinistryPermissions(ministry, user);
 
     // Dates range for current month view (or similar)
     const monthStart = startOfMonth(currentMonth);
@@ -73,6 +77,7 @@ export default function MinistrySchedulePage() {
     };
 
     const handleCellClick = (roleId: string, date: Date, assignment?: any) => {
+        if (!isLeaderOrCoordinator) return;
         setSelectedCell({ date, roleId, currentAssignment: assignment });
 
         // Reset Form
@@ -263,8 +268,8 @@ export default function MinistrySchedulePage() {
                                                     onClick={() => handleCellClick(duty.id, day, assignment)}
                                                     className={`w-full h-full min-h-[60px] rounded-lg p-2 text-left transition-all flex items-center gap-3
                                                         ${assignment
-                                                            ? 'bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200'
-                                                            : 'bg-white hover:bg-slate-50 border border-transparent border-dashed hover:border-slate-300'
+                                                            ? (isLeaderOrCoordinator ? 'bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200 cursor-pointer' : 'bg-indigo-50 border border-indigo-100 cursor-default')
+                                                            : (isLeaderOrCoordinator ? 'bg-white hover:bg-slate-50 border border-transparent border-dashed hover:border-slate-300 cursor-pointer' : 'bg-transparent cursor-default border border-transparent')
                                                         }`}
                                                 >
                                                     {assignment ? (
@@ -280,17 +285,21 @@ export default function MinistrySchedulePage() {
                                                                     {assignment.person?.firstName}
                                                                 </span>
                                                             </div>
-                                                            <div
-                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-100 rounded-full text-red-400 hover:text-red-600"
-                                                                onClick={(e) => handleQuickDelete(assignment.id, e)}
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </div>
+                                                            {isLeaderOrCoordinator && (
+                                                                <div
+                                                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-100 rounded-full text-red-400 hover:text-red-600"
+                                                                    onClick={(e) => handleQuickDelete(assignment.id, e)}
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </div>
+                                                            )}
                                                         </>
                                                     ) : (
-                                                        <div className="w-full flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Plus className="w-5 h-5 text-slate-300" />
-                                                        </div>
+                                                        isLeaderOrCoordinator ? (
+                                                            <div className="w-full flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Plus className="w-5 h-5 text-slate-300" />
+                                                            </div>
+                                                        ) : null
                                                     )}
                                                 </button>
                                             </td>

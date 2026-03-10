@@ -92,14 +92,14 @@ export function GroupCard({
                             <span className="line-clamp-1">{group.address}</span>
                         </div>
                     )}
-                    <div className="flex items-center text-sm text-slate-600">
-                        <Users className="w-4 h-4 mr-2 text-slate-400 shrink-0" />
-                        <span>{participantsCount} inscritos</span>
-                    </div>
                 </div>
 
-                <div className="pt-2 text-xs text-slate-400">
-                    Creado el {format(new Date(group.createdAt), "d 'de' MMMM, yyyy", { locale: es })}
+                <div className="pt-2 flex items-center justify-between text-xs text-slate-400">
+                    <span>Creado el {format(new Date(group.createdAt), "d 'de' MMMM, yyyy", { locale: es })}</span>
+                    <span className="flex items-center bg-slate-50 px-2 py-1 rounded-md text-slate-500 font-medium">
+                        <Users className="w-3.5 h-3.5 mr-1 text-slate-400" />
+                        {participantsCount} inscr.
+                    </span>
                 </div>
             </CardContent>
 

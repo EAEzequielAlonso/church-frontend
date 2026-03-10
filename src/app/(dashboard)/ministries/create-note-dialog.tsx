@@ -14,10 +14,11 @@ interface CreateNoteDialogProps {
     onOpenChange: (open: boolean) => void;
     ministryId: string;
     eventId: string | null;
+    isLeaderOrCoordinator: boolean;
     onSuccess: () => void;
 }
 
-export function CreateNoteDialog({ open, onOpenChange, ministryId, eventId, onSuccess }: CreateNoteDialogProps) {
+export function CreateNoteDialog({ open, onOpenChange, ministryId, eventId, isLeaderOrCoordinator, onSuccess }: CreateNoteDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isFetching, setIsFetching] = useState(false);
     const [noteId, setNoteId] = useState<string | null>(null);
@@ -161,7 +162,8 @@ export function CreateNoteDialog({ open, onOpenChange, ministryId, eventId, onSu
                                             placeholder="Escribe aquí el resumen de los temas discutidos en la reunión..."
                                             value={formData.summary}
                                             onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-                                            className="resize-none flex-1 border-slate-200 focus:ring-primary/20 text-base leading-relaxed p-4 rounded-xl"
+                                            readOnly={!isLeaderOrCoordinator}
+                                            className={`resize-none flex-1 border-slate-200 text-base leading-relaxed p-4 rounded-xl ${!isLeaderOrCoordinator ? 'bg-slate-50 focus:ring-0 cursor-default' : 'focus:ring-primary/20'}`}
                                         />
                                     </div>
                                 </TabsContent>
@@ -173,7 +175,8 @@ export function CreateNoteDialog({ open, onOpenChange, ministryId, eventId, onSu
                                             placeholder="Lista las decisiones tomadas y acuerdos alcanzados..."
                                             value={formData.decisions}
                                             onChange={(e) => setFormData({ ...formData, decisions: e.target.value })}
-                                            className="resize-none flex-1 border-slate-200 focus:ring-primary/20 text-base leading-relaxed p-4 rounded-xl bg-indigo-50/30"
+                                            readOnly={!isLeaderOrCoordinator}
+                                            className={`resize-none flex-1 border-slate-200 text-base leading-relaxed p-4 rounded-xl ${!isLeaderOrCoordinator ? 'bg-slate-50 focus:ring-0 cursor-default' : 'bg-indigo-50/30 focus:ring-primary/20'}`}
                                         />
                                     </div>
                                 </TabsContent>
@@ -185,7 +188,8 @@ export function CreateNoteDialog({ open, onOpenChange, ministryId, eventId, onSu
                                             placeholder="Detalla las tareas pendientes y próximos pasos a seguir..."
                                             value={formData.nextSteps}
                                             onChange={(e) => setFormData({ ...formData, nextSteps: e.target.value })}
-                                            className="resize-none flex-1 border-slate-200 focus:ring-primary/20 text-base leading-relaxed p-4 rounded-xl"
+                                            readOnly={!isLeaderOrCoordinator}
+                                            className={`resize-none flex-1 border-slate-200 text-base leading-relaxed p-4 rounded-xl ${!isLeaderOrCoordinator ? 'bg-slate-50 focus:ring-0 cursor-default' : 'focus:ring-primary/20'}`}
                                         />
                                     </div>
                                 </TabsContent>
@@ -199,13 +203,15 @@ export function CreateNoteDialog({ open, onOpenChange, ministryId, eventId, onSu
                                 {activeTab === 'nextSteps' && 'Paso 3 de 3: Define acciones futuras'}
                             </div>
                             <div className="flex gap-2">
-                                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold">
-                                    Cancelar
+                                <Button type="button" variant={isLeaderOrCoordinator ? "ghost" : "default"} onClick={() => onOpenChange(false)} className="rounded-xl font-bold">
+                                    {isLeaderOrCoordinator ? 'Cancelar' : 'Cerrar'}
                                 </Button>
-                                <Button type="submit" className="rounded-xl font-bold gap-2" disabled={isLoading}>
-                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                                    Guardar Todo
-                                </Button>
+                                {isLeaderOrCoordinator && (
+                                    <Button type="submit" className="rounded-xl font-bold gap-2" disabled={isLoading}>
+                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                        Guardar Todo
+                                    </Button>
+                                )}
                             </div>
                         </DialogFooter>
                     </form>

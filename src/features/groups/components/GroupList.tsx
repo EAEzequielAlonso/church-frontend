@@ -120,29 +120,31 @@ export function GroupList({ type }: GroupListProps) {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200">
-                <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${config.bgColor} ${config.color}`}>
-                        <config.icon className="w-6 h-6" />
+            {type !== 'ALL' && (
+                <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${config.bgColor} ${config.color}`}>
+                            <config.icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-800">{config.labelPlural}</h2>
+                            <p className="text-sm text-slate-500">
+                                Gestión de {config.labelPlural.toLowerCase()} de la iglesia.
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-800">{config.labelPlural}</h2>
-                        <p className="text-sm text-slate-500">
-                            Gestión de {config.labelPlural.toLowerCase()} de la iglesia.
-                        </p>
-                    </div>
-                </div>
 
-                {isAdminOrAuditor && (
-                    <Button
-                        onClick={handleCreateClick}
-                        className={`shadow-sm text-white ${config.color.replace('text-', 'bg-')} hover:opacity-90`}
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        {config.createButtonLabel}
-                    </Button>
-                )}
-            </div>
+                    {isAdminOrAuditor && (
+                        <Button
+                            onClick={handleCreateClick}
+                            className={`shadow-sm text-white ${config.color.replace('text-', 'bg-')} hover:opacity-90`}
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            {config.createButtonLabel}
+                        </Button>
+                    )}
+                </div>
+            )}
 
             {isLoading ? (
                 <div className="flex justify-center py-20">

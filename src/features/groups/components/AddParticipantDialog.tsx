@@ -19,7 +19,7 @@ interface AddParticipantDialogProps {
 export function AddParticipantDialog({ open, onOpenChange, currentParticipants, onAdd }: AddParticipantDialogProps) {
     const { persons, isLoading } = useChurchPersons();
     const [selectedPersonId, setSelectedPersonId] = useState<string>('');
-    const [selectedRole, setSelectedRole] = useState<GroupRole>('MEMBER');
+    const [selectedRole, setSelectedRole] = useState<GroupRole>('PARTICIPANT');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -42,7 +42,7 @@ export function AddParticipantDialog({ open, onOpenChange, currentParticipants, 
         try {
             await onAdd(selectedPersonId, selectedRole);
             setSelectedPersonId('');
-            setSelectedRole('MEMBER');
+            setSelectedRole('PARTICIPANT');
             setSearchTerm('');
             onOpenChange(false);
         } catch (error) {
@@ -135,10 +135,9 @@ export function AddParticipantDialog({ open, onOpenChange, currentParticipants, 
                                 <SelectValue placeholder="Rol" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="LEADER">Líder / Maestro</SelectItem>
-                                <SelectItem value="CO_LEADER">Co-Líder / Auxiliar</SelectItem>
-                                <SelectItem value="MEMBER">Participante / Alumno</SelectItem>
-                                <SelectItem value="GUEST">Invitado Ocasional</SelectItem>
+                                <SelectItem value="COORDINATOR">Coordinador</SelectItem>
+                                <SelectItem value="TEACHER">Maestro</SelectItem>
+                                <SelectItem value="PARTICIPANT">Participante</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

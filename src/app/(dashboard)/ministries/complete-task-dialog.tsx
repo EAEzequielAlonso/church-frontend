@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,10 +20,12 @@ interface CompleteTaskDialogProps {
 export function CompleteTaskDialog({ open, onOpenChange, ministryId, task, onSuccess }: CompleteTaskDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [observation, setObservation] = useState('');
+    const [status, setStatus] = useState('completed');
 
     useEffect(() => {
         if (open) {
             setObservation('');
+            setStatus('completed');
         }
     }, [open]);
 
@@ -40,7 +43,7 @@ export function CompleteTaskDialog({ open, onOpenChange, ministryId, task, onSuc
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    status: 'completed',
+                    status: status,
                     observation: observation
                 })
             });
@@ -73,6 +76,20 @@ export function CompleteTaskDialog({ open, onOpenChange, ministryId, task, onSuc
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
+                        <Label className="font-bold text-xs uppercase text-slate-500">¿Cómo finalizó la misión?</Label>
+                        <Select value={status} onValueChange={setStatus}>
+                            <SelectTrigger className="rounded-xl border-slate-200 font-bold outline-none ring-0 focus:ring-primary/20">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-200">
+                                <SelectItem value="completed" className="font-bold text-green-700">Completada (Finalizada con éxito)</SelectItem>
+                                <SelectItem value="incomplete" className="font-bold text-orange-700">Incompleta (A medias)</SelectItem>
+                                <SelectItem value="cancelled" className="font-bold text-red-700">Cancelada (No se pudo realizar)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
                         <Label htmlFor="observation" className="font-bold text-xs uppercase text-slate-500">Observación (Opcional)</Label>
                         <Textarea
                             id="observation"
@@ -87,9 +104,9 @@ export function CompleteTaskDialog({ open, onOpenChange, ministryId, task, onSuc
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold">
                             Cancelar
                         </Button>
-                        <Button type="submit" className="rounded-xl font-bold gap-2 bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
+                        <Button type="submit" className="rounded-xl font-bold gap-2 bg-slate-900 hover:bg-slate-800 text-white" disabled={isLoading}>
                             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                            Completar Misión
+                            Confirmar Resolución
                         </Button>
                     </DialogFooter>
                 </form>

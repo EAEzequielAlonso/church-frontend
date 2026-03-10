@@ -1,6 +1,6 @@
 
 import useSWR, { useSWRConfig } from 'swr';
-import * as api from '../api/treasury.api';
+import { treasuryApi } from '@/app/(dashboard)/treasury/services/treasuryApi';
 import * as mapper from '../mappers/treasury.mapper';
 import { TreasuryAccountModel, CreateAccountDto, UpdateAccountDto } from '../types/treasury.types';
 import { useAuth } from '@/context/AuthContext';
@@ -9,37 +9,26 @@ import { toast } from 'sonner';
 
 export function useAccounts() {
     const { churchId } = useAuth();
-    const { data, error, isLoading, mutate } = useSWR(
+    const { data: accounts, mutate, isLoading } = useSWR<TreasuryAccountModel[]>(
         churchId ? `/treasury/accounts?churchId=${churchId}` : null,
-        () => api.getAccounts(churchId!)
+        () => treasuryApi.accounts.getAll(churchId!).then((dtos: any[]) => dtos.map(mapper.toUiAccount))
     );
 
-    const accounts: TreasuryAccountModel[] = data ? data.map(mapper.toUiAccount) : [];
-
-    return { accounts, isLoading, error, mutate };
-}
-
-export function useCreateAccount() {
-    const { mutate } = useSWRConfig();
-    const { churchId } = useAuth();
-    const [isLoading, setIsLoading] = useState(false);
-
-    const execute = async (data: CreateAccountDto, onSuccess?: () => void) => {
-        if (!churchId) return;
-        setIsLoading(true);
+    const createAccount = async (data: CreateAccountDto, onSuccess?: () => void) => {
         try {
-            await api.createAccount({ ...data, churchId }); // Pass churchId inside data
-            mutate((key) => typeof key === 'string' && key.startsWith('/treasury/accounts'));
+            const newDto = await treasuryApi.accounts.create({ ...data, churchId: churchId! });
+            const newAccount = mapper.toUiAccount(newDto);
+            mutate();
             toast.success('Cuenta creada correctamente');
             if (onSuccess) onSuccess();
+            return newAccount;
         } catch (error: any) {
             toast.error(error.message || 'Error al crear la cuenta');
-        } finally {
-            setIsLoading(false);
+            throw error;
         }
     };
 
-    return { execute, isLoading };
+    return { accounts: accounts || [], createAccount, mutate, isLoading };
 }
 
 export function useUpdateAccount() {
@@ -49,7 +38,7 @@ export function useUpdateAccount() {
     const execute = async (id: string, data: UpdateAccountDto, onSuccess?: () => void) => {
         setIsLoading(true);
         try {
-            await api.updateAccount(id, data);
+            await treasuryApi.accounts.update(id, data);
             mutate((key) => typeof key === 'string' && key.startsWith('/treasury/accounts'));
             toast.success('Cuenta actualizada correctamente');
             if (onSuccess) onSuccess();
@@ -70,7 +59,7 @@ export function useDeleteAccount() {
     const execute = async (id: string, onSuccess?: () => void) => {
         setIsLoading(true);
         try {
-            await api.deleteAccount(id);
+            await treasuryApi.accounts.delete(id);
             mutate((key) => typeof key === 'string' && key.startsWith('/treasury/accounts'));
             toast.success('Cuenta eliminada correctamente');
             if (onSuccess) onSuccess();
