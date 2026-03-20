@@ -44,6 +44,19 @@ export function useGroupMutations() {
         }
     };
 
+    const bulkAddParticipants = async (groupId: string, personIds: string[]): Promise<void> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            await groupsApi.bulkAddParticipants(groupId, { personIds });
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Error al añadir participantes');
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const updateRole = async (groupId: string, churchPersonId: string, role: import('../types/group.types').GroupRole): Promise<void> => {
         setIsLoading(true);
         setError(null);
@@ -61,6 +74,7 @@ export function useGroupMutations() {
         enroll,
         disenroll,
         addParticipant,
+        bulkAddParticipants,
         updateRole,
         isLoading,
         error

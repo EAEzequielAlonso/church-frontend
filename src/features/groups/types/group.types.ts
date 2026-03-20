@@ -49,6 +49,11 @@ export interface GroupParticipantDto {
     churchPerson: ChurchPersonDto;
     role: GroupRole;
     joinedAt: string;
+    attendance?: {
+        presentCount: number;
+        totalMeetings: number;
+        rate: number | null;
+    };
 }
 
 export interface GroupMeetingDto {
@@ -117,4 +122,8 @@ export interface RegisterAttendanceItemDto {
 
 export interface RegisterAttendanceDto {
     items: RegisterAttendanceItemDto[];
+}
+
+export interface BulkAddParticipantsDto {
+    personIds: string[];
 }

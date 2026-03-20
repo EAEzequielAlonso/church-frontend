@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { groupsApi } from '../api/groups.api';
-import { GroupAttendanceDto } from '../types/group.types';
+import { GroupAttendanceDto, RegisterAttendanceDto } from '../types/group.types';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,53 +16,46 @@ export function GroupAttendance({ meetingId, groupId, onBack }: GroupAttendanceP
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Mantenemos un estado local para edición
-    const [localState, setLocalState] = useState<Record<string, boolean>>({});
-
     useEffect(() => {
         loadAttendance();
-    }, [meetingId]);
+    }, [meetingId, groupId]);
 
     const loadAttendance = async () => {
         setIsLoading(true);
         try {
-            const data = await groupsApi.getMeetingAttendance(meetingId);
+            const data = await groupsApi.getMeetingAttendance(groupId, meetingId);
             setAttendances(data);
-
-            // Inicializar estado local
-            const mapping: Record<string, boolean> = {};
-            data.forEach((item: GroupAttendanceDto) => {
-                mapping[item.churchPerson.id] = item.present;
-            });
-            setLocalState(mapping);
-
         } catch (error) {
+            console.error(error);
             toast.error("Error al cargar la asistencia");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleToggle = (personId: string, present: boolean) => {
-        setLocalState(prev => ({
-            ...prev,
-            [personId]: present
-        }));
+    const handleToggle = (churchPersonId: string, present: boolean) => {
+        setAttendances(prev => prev.map(item => 
+            item.churchPerson.id === churchPersonId 
+                ? { ...item, present } 
+                : item
+        ));
     };
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const payloadItems = Object.keys(localState).map(personId => ({
-                churchPersonId: personId,
-                present: localState[personId]
-            }));
+            const payload: RegisterAttendanceDto = {
+                items: attendances.map(item => ({
+                    churchPersonId: item.churchPerson.id,
+                    present: item.present
+                }))
+            };
 
-            await groupsApi.registerAttendance(meetingId, { items: payloadItems });
+            await groupsApi.registerAttendance(groupId, meetingId, payload);
             toast.success("Asistencia guardada correctamente");
-
-            onBack(); // Volver al listado
+            onBack();
         } catch (error) {
+            console.error(error);
             toast.error("Error al guardar asistencia");
         } finally {
             setIsSaving(false);
@@ -88,7 +81,7 @@ export function GroupAttendance({ meetingId, groupId, onBack }: GroupAttendanceP
 
                 <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
                     {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Guardar Cambios
+                    Guardar Asistencia
                 </Button>
             </div>
 
@@ -102,10 +95,10 @@ export function GroupAttendance({ meetingId, groupId, onBack }: GroupAttendanceP
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {attendances.map((item) => {
-                            const isPresent = localState[item.churchPerson.id] ?? false;
+                            const isPresent = item.present;
 
                             return (
-                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                <tr key={item.churchPerson.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-slate-800">
                                         {item.churchPerson.person.fullName}
                                     </td>
@@ -115,7 +108,10 @@ export function GroupAttendance({ meetingId, groupId, onBack }: GroupAttendanceP
                                                 variant={isPresent ? "default" : "outline"}
                                                 size="sm"
                                                 onClick={() => handleToggle(item.churchPerson.id, true)}
-                                                className={isPresent ? "bg-emerald-500 hover:bg-emerald-600 border-none" : "text-slate-400 border-slate-200 hover:border-emerald-200 hover:text-emerald-500"}
+                                                className={isPresent 
+                                                    ? "bg-emerald-500 hover:bg-emerald-600 border-none" 
+                                                    : "text-slate-400 border-slate-200 hover:border-emerald-200 hover:text-emerald-500"
+                                                }
                                             >
                                                 <Check className="w-4 h-4 mr-1" /> Presente
                                             </Button>
@@ -124,7 +120,10 @@ export function GroupAttendance({ meetingId, groupId, onBack }: GroupAttendanceP
                                                 variant={!isPresent ? "destructive" : "outline"}
                                                 size="sm"
                                                 onClick={() => handleToggle(item.churchPerson.id, false)}
-                                                className={!isPresent ? "bg-rose-500 hover:bg-rose-600 border-none" : "text-slate-400 border-slate-200 hover:border-rose-200 hover:text-rose-500"}
+                                                className={!isPresent 
+                                                    ? "bg-rose-500 hover:bg-rose-600 border-none" 
+                                                    : "text-slate-400 border-slate-200 hover:border-rose-200 hover:text-rose-500"
+                                                }
                                             >
                                                 <X className="w-4 h-4 mr-1" /> Ausente
                                             </Button>
@@ -137,8 +136,9 @@ export function GroupAttendance({ meetingId, groupId, onBack }: GroupAttendanceP
                 </table>
 
                 {attendances.length === 0 && (
-                    <div className="text-center py-8 text-slate-500">
-                        Nadie inscrito aún en el grupo para tomarle asistencia.
+                    <div className="text-center py-12 text-slate-500">
+                        <div className="mb-2">No hay participantes inscritos en este grupo para tomar asistencia.</div>
+                        <p className="text-xs">Asegúrate de agregar miembros al grupo primero.</p>
                     </div>
                 )}
             </div>

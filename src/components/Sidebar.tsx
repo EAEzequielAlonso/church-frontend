@@ -63,14 +63,7 @@ export function Sidebar() {
                 { name: 'Ministerios', href: '/ministries', icon: Users },
                 { name: 'Familias', href: '/families', icon: Users },
                 { name: 'Comunidad', href: '/community', icon: Users },
-            ].filter((item: any) => item.show ?? true)
-        },
-        {
-            label: 'Cuidado',
-            items: [
-                { name: 'Acompañamiento', href: '/mentorship', icon: HeartHandshake, show: hasRole(['ADMIN_CHURCH', 'COUNSELOR', 'PASTOR', 'DISCIPLER']) },
-                // { name: 'Seguimiento', href: '/followups', icon: UserPlus }, // Removed per user request
-                { name: 'Muro de Oración', href: '/prayers', icon: HeartHandshake },
+                { name: 'Acompañamiento', href: '/mentorship', icon: HeartHandshake },
             ]
         },
         {

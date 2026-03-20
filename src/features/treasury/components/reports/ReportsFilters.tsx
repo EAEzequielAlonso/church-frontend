@@ -11,9 +11,11 @@ interface ReportsFiltersProps {
     startDate: Date;
     endDate: Date;
     onDateChange: (start: Date, end: Date) => void;
+    onPdfExport: () => void;
+    isExporting?: boolean;
 }
 
-export function ReportsFilters({ startDate, endDate, onDateChange }: ReportsFiltersProps) {
+export function ReportsFilters({ startDate, endDate, onDateChange, onPdfExport, isExporting }: ReportsFiltersProps) {
     // Simplified Date Range Picker or just two inputs
     // Using simple inputs for speed and robustness for now, or Popover Calendar if available
     // Let's use standard HTML date inputs styled nicely or Shadcn Calendar if I knew it was fully set up.
@@ -42,10 +44,16 @@ export function ReportsFilters({ startDate, endDate, onDateChange }: ReportsFilt
 
             <div className="flex-1"></div>
 
-            {/* Future: Export Buttons */}
             <div className="flex gap-2">
-                <Button variant="outline" size="sm">Exportar PDF</Button>
-                <Button variant="outline" size="sm">Exportar CSV</Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={onPdfExport}
+                    disabled={isExporting}
+                    className="bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary"
+                >
+                    {isExporting ? 'Generando...' : 'Exportar PDF'}
+                </Button>
             </div>
         </div>
     )

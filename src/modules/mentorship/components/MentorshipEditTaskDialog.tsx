@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarIcon, Loader2, CheckSquare } from 'lucide-react';
+import { CalendarIcon, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -13,7 +13,6 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
     DialogFooter,
     DialogDescription
 } from '@/components/ui/dialog';
@@ -36,10 +35,21 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
 
-import { useCreateTask } from '../hooks/use-create-task';
+import { useUpdateTask } from '../hooks/use-update-task';
 import { createMentorshipTaskSchema, CreateMentorshipTaskFormValues } from '../schemas/mentorship-interactions.schema';
 
-interface MentorshipCreateTaskDialogProps {
+interface MentorshipEditTaskDialogProps {
+    task: {
+        id: string;
+        title: string;
+        description?: string;
+        mentorInstruction?: string;
+        dueDate?: string;
+        isGroupTask: boolean;
+        assignedChurchPersonId?: string;
+        meetingId?: string;
+        status: string;
+    };
     mentorshipId: string;
     participants: {
         id: string;
@@ -48,25 +58,12 @@ interface MentorshipCreateTaskDialogProps {
     }[];
     getPersonName: (id: string) => string;
     meetings?: { id: string; title?: string; scheduledDate: string | Date }[];
-    initialMeetingId?: string;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
 }
 
-export function MentorshipCreateTaskDialog({ 
-    mentorshipId, 
-    participants, 
-    getPersonName, 
-    meetings = [], 
-    initialMeetingId,
-    open: externalOpen,
-    onOpenChange: onExternalOpenChange
-}: MentorshipCreateTaskDialogProps) {
-    const [internalOpen, setInternalOpen] = useState(false);
-    const open = externalOpen !== undefined ? externalOpen : internalOpen;
-    const setOpen = onExternalOpenChange !== undefined ? onExternalOpenChange : setInternalOpen;
-
-    const { createTask, isMutating } = useCreateTask();
+export function MentorshipEditTaskDialog({ task, mentorshipId, participants, getPersonName, meetings = [], open, onOpenChange }: MentorshipEditTaskDialogProps) {
+    const { updateTask, isMutating } = useUpdateTask();
 
     const {
         register,
@@ -78,29 +75,38 @@ export function MentorshipCreateTaskDialog({
     } = useForm<CreateMentorshipTaskFormValues>({
         resolver: zodResolver(createMentorshipTaskSchema),
         defaultValues: {
-            title: '',
-            description: '',
-            meetingId: initialMeetingId,
+            title: task.title,
+            description: task.description || '',
+            mentorInstruction: task.mentorInstruction || '',
+            dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+            isGroupTask: task.isGroupTask,
+            assignedChurchPersonId: task.assignedChurchPersonId,
+            meetingId: task.meetingId
         }
     });
 
-    const isGroupTask = watch('isGroupTask');
-
+    // Reset form when task changes or dialog opens
     useEffect(() => {
         if (open) {
             reset({
-                title: '',
-                description: '',
-                isGroupTask: false,
-                meetingId: initialMeetingId,
+                title: task.title,
+                description: task.description || '',
+                mentorInstruction: task.mentorInstruction || '',
+                dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+                isGroupTask: task.isGroupTask,
+                assignedChurchPersonId: task.assignedChurchPersonId,
+                meetingId: task.meetingId
             });
         }
-    }, [open, initialMeetingId, reset]);
+    }, [open, task, reset]);
+
+    const isGroupTask = watch('isGroupTask');
 
     const onSubmit = async (data: CreateMentorshipTaskFormValues) => {
         try {
-            await createTask({
+            await updateTask({
                 mentorshipId,
+                taskId: task.id,
                 payload: {
                     title: data.title,
                     description: data.description,
@@ -111,35 +117,28 @@ export function MentorshipCreateTaskDialog({
                     meetingId: data.meetingId
                 }
             });
-            toast.success('Tarea creada exitosamente');
-            reset();
-            setOpen(false);
+            toast.success('Tarea actualizada exitosamente');
+            onOpenChange(false);
         } catch (error: any) {
-            toast.error(error.message || 'Error al crear la tarea');
+            toast.error(error.message || 'Error al actualizar la tarea');
         }
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" className="font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200" size="sm">
-                    <CheckSquare className="w-4 h-4 mr-2" />
-                    Asignar Tarea
-                </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[450px]">
                 <DialogHeader>
-                    <DialogTitle>Asignar Nueva Tarea</DialogTitle>
+                    <DialogTitle>Editar Tarea</DialogTitle>
                     <DialogDescription>
-                        Crea una meta o actividad para el proceso de mentoría.
+                        Modifica los detalles de la meta o actividad del proceso.
                     </DialogDescription>
                 </DialogHeader>
 
-                <form id="create-task-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                <form id="edit-task-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
                     <div className="space-y-2">
-                        <Label htmlFor="title">Título de la Tarea <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="edit-title">Título de la Tarea <span className="text-red-500">*</span></Label>
                         <Input
-                            id="title"
+                            id="edit-title"
                             placeholder="Ej: Leer capítulo 2, Escribir ensayo..."
                             {...register('title')}
                             className={errors.title ? "border-red-500" : ""}
@@ -148,9 +147,9 @@ export function MentorshipCreateTaskDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">Objetivo / Descripción (Opcional)</Label>
+                        <Label htmlFor="edit-description">Objetivo / Descripción (Opcional)</Label>
                         <Textarea
-                            id="description"
+                            id="edit-description"
                             placeholder="Detalles sobre qué se busca lograr..."
                             {...register('description')}
                             className="h-16 resize-none"
@@ -158,14 +157,13 @@ export function MentorshipCreateTaskDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="mentorInstruction">Instrucción del Mentor</Label>
+                        <Label htmlFor="edit-mentorInstruction">Instrucción del Mentor</Label>
                         <Textarea
-                            id="mentorInstruction"
+                            id="edit-mentorInstruction"
                             placeholder="Instrucciones específicas para el guiado..."
                             {...register('mentorInstruction')}
                             className="h-20 resize-none"
                         />
-                        <p className="text-[10px] text-slate-500 italic">Esta instrucción guiará al participante al realizar la tarea.</p>
                     </div>
 
                     <div className="space-y-2">
@@ -174,7 +172,7 @@ export function MentorshipCreateTaskDialog({
                             control={control}
                             name="meetingId"
                             render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value || "none"}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Sin encuentro asociado" />
                                     </SelectTrigger>
@@ -236,9 +234,6 @@ export function MentorshipCreateTaskDialog({
                                 )}
                             />
                         </div>
-                        <p className="text-xs text-slate-500 -mt-2">
-                            {isGroupTask ? "Todos los integrantes deberán completarla." : "Asignada a una persona específica."}
-                        </p>
 
                         {!isGroupTask && (
                             <div className="space-y-2">
@@ -268,10 +263,11 @@ export function MentorshipCreateTaskDialog({
                 </form>
 
                 <DialogFooter className="pt-4 mt-2 border-t border-slate-100">
-                    <Button variant="outline" onClick={() => setOpen(false)} disabled={isMutating} type="button">Cancelar</Button>
-                    <Button type="submit" form="create-task-form" disabled={isMutating} className="bg-primary hover:bg-primary/90">
+                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isMutating} type="button">Cancelar</Button>
+                    <Button type="submit" form="edit-task-form" disabled={isMutating} className="bg-primary hover:bg-primary/90">
                         {isMutating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                        Guardar Tarea
+                        <Save className="w-4 h-4 mr-2" />
+                        Actualizar Tarea
                     </Button>
                 </DialogFooter>
             </DialogContent>

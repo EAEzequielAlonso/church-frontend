@@ -1,21 +1,55 @@
-import { fetchWithAuth, buildQueryString } from '@/app/(dashboard)/treasury/services/treasuryApi';
-import { BudgetModel, CreateBudgetDto, BudgetExecutionResponse } from '../types/budget.types';
+import { fetchWithAuth } from '@/app/(dashboard)/treasury/services/treasuryApi';
+import {
+    BudgetPeriod,
+    BudgetAllocation,
+    BudgetExecutionResponse,
+    CreateBudgetPeriodDto,
+    CreateBudgetAllocationDto,
+} from '../types/budget.types';
 
 export const budgetApi = {
-    getAll: (churchId: string, year?: number, month?: number): Promise<BudgetModel[]> =>
-        fetchWithAuth<BudgetModel[]>(`/treasury/budgets${buildQueryString({ churchId, year, month })}`),
+    // ── Periods ──
 
-    create: (data: CreateBudgetDto): Promise<BudgetModel> =>
-        fetchWithAuth<BudgetModel>('/treasury/budgets', {
+    getPeriods: (year?: number): Promise<BudgetPeriod[]> =>
+        fetchWithAuth<BudgetPeriod[]>(`/budget/periods${year ? `?year=${year}` : ''}`),
+
+    createPeriod: (data: CreateBudgetPeriodDto): Promise<BudgetPeriod> =>
+        fetchWithAuth<BudgetPeriod>('/budget/periods', {
             method: 'POST',
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
         }),
 
-    delete: (id: string): Promise<void> =>
-        fetchWithAuth<void>(`/treasury/budgets/${id}`, {
-            method: 'DELETE'
+    updatePeriod: (id: string, data: Partial<CreateBudgetPeriodDto>): Promise<BudgetPeriod> =>
+        fetchWithAuth<BudgetPeriod>(`/budget/periods/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
         }),
 
-    getExecution: (churchId: string, year: number, month: number): Promise<BudgetExecutionResponse> =>
-        fetchWithAuth<BudgetExecutionResponse>(`/treasury/budgets/execution${buildQueryString({ churchId, year, month })}`),
+    deletePeriod: (id: string): Promise<void> =>
+        fetchWithAuth<void>(`/budget/periods/${id}`, { method: 'DELETE' }),
+
+    // ── Allocations ──
+
+    getAllocations: (periodId: string): Promise<BudgetAllocation[]> =>
+        fetchWithAuth<BudgetAllocation[]>(`/budget/allocations?periodId=${periodId}`),
+
+    createAllocation: (data: CreateBudgetAllocationDto): Promise<BudgetAllocation> =>
+        fetchWithAuth<BudgetAllocation>('/budget/allocations', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+
+    updateAllocation: (id: string, data: { amount: number }): Promise<BudgetAllocation> =>
+        fetchWithAuth<BudgetAllocation>(`/budget/allocations/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        }),
+
+    deleteAllocation: (id: string): Promise<void> =>
+        fetchWithAuth<void>(`/budget/allocations/${id}`, { method: 'DELETE' }),
+
+    // ── Execution ──
+
+    getExecution: (periodId: string): Promise<BudgetExecutionResponse> =>
+        fetchWithAuth<BudgetExecutionResponse>(`/budget/execution/${periodId}`),
 };

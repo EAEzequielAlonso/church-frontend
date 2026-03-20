@@ -5,9 +5,9 @@ export enum TransactionStatus {
 }
 
 export enum TransactionType {
-    INCOME = 'INCOME',
-    EXPENSE = 'EXPENSE',
-    TRANSFER = 'TRANSFER'
+    INCOME = 'income',
+    EXPENSE = 'expense',
+    TRANSFER = 'transfer'
 }
 
 export enum AuditEntityType {
@@ -47,6 +47,8 @@ export interface TransactionCategory {
     icon?: string;
     churchId?: string;
     parentId?: string;
+    isArchived: boolean;
+    hasTransactions: boolean;
 }
 
 export type TransactionCategoryModel = TransactionCategory;
@@ -57,10 +59,12 @@ export interface TreasuryAccountDto {
     id: string;
     name: string;
     type: AccountType;
-    balance: number; // string/decimal from backend, handled as number in UI usually or kept string
+    balance: number;
     currency: string;
     description?: string;
     churchId?: string;
+    isArchived: boolean;
+    hasTransactions?: boolean;
 }
 
 export interface MinistryDto {
@@ -88,6 +92,7 @@ export interface TreasuryTransactionDto {
     reversalId?: string;
     correctionId?: string;
     isCorrection?: boolean;
+    isInvalidated?: boolean;
 }
 
 // --- Payload DTOs ---
@@ -127,9 +132,12 @@ export interface CreateAccountDto {
     description?: string;
     churchId: string;
     balance?: number;
+    isArchived?: boolean;
 }
 
-export interface UpdateAccountDto extends Partial<CreateAccountDto> { }
+export interface UpdateAccountDto extends Partial<CreateAccountDto> {
+    isArchived?: boolean;
+}
 
 export interface TreasuryStats {
     totalBalance: number;
@@ -138,6 +146,19 @@ export interface TreasuryStats {
     balanceTrend: number;
     incomeTrend: number;
     expenseTrend: number;
+}
+
+export interface CreateCategoryDto {
+    name: string;
+    type: string;
+    churchId: string;
+    parentCategoryId?: string;
+    color?: string;
+    icon?: string;
+}
+
+export interface UpdateCategoryDto extends Partial<CreateCategoryDto> {
+    isArchived?: boolean;
 }
 
 // --- UI Models (Mapped) ---
@@ -168,7 +189,8 @@ export interface TreasuryTransactionModel {
     deletedAt?: Date;
     reversalId?: string;
     correctionId?: string;
-    isCorrection?: boolean;
+    isCorrection: boolean;
+    isInvalidated: boolean;
 }
 
 export interface TreasuryAccountModel {
@@ -178,4 +200,6 @@ export interface TreasuryAccountModel {
     balance: number;
     currency: string;
     formattedBalance: string;
+    isArchived: boolean;
+    hasTransactions: boolean;
 }

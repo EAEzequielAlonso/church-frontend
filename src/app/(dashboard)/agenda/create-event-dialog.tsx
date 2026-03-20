@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarEventType, CreateCalendarEventDto, CalendarEvent } from "@/types/agenda";
+import { CalendarEventType, CreateCalendarEventDto, CalendarEvent, EVENT_TYPE_COLORS, EVENT_TYPE_ICONS } from "@/types/agenda";
+import * as LucideIcons from "lucide-react";
 import { toast } from 'sonner';
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, User, Calendar, BookOpen, Star, Briefcase, HeartHandshake, Church, GraduationCap, UserPlus } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
 
 interface CreateEventDialogProps {
@@ -39,7 +40,7 @@ export function CreateEventDialog({ onEventCreated, onSubmitOverride, defaultTyp
         description: '',
         location: '',
         type: defaultType || CalendarEventType.PERSONAL,
-        color: '#3b82f6', // blue
+        color: EVENT_TYPE_COLORS[defaultType || CalendarEventType.PERSONAL],
         isAllDay: false,
         ownerId: (defaultType === CalendarEventType.MINISTRY || defaultType === CalendarEventType.SMALL_GROUP) ? defaultEntityId : undefined,
     });
@@ -78,6 +79,7 @@ export function CreateEventDialog({ onEventCreated, onSubmitOverride, defaultTyp
                     description: '',
                     location: '',
                     type: defaultType || prev.type || CalendarEventType.PERSONAL,
+                    color: EVENT_TYPE_COLORS[defaultType || prev.type || CalendarEventType.PERSONAL],
                     ownerId: (defaultType === CalendarEventType.MINISTRY || defaultType === CalendarEventType.SMALL_GROUP) ? defaultEntityId : prev.ownerId,
                 }));
                 // Reset date inputs if needed or keep them empty
@@ -86,6 +88,16 @@ export function CreateEventDialog({ onEventCreated, onSubmitOverride, defaultTyp
             }
         }
     }, [open, defaultType, defaultEntityId, eventToEdit]);
+
+    // Handle type change effects
+    useEffect(() => {
+        if (formData.type && formData.type !== CalendarEventType.PERSONAL) {
+            setFormData(prev => ({ 
+                ...prev, 
+                color: EVENT_TYPE_COLORS[prev.type as CalendarEventType] 
+            }));
+        }
+    }, [formData.type]);
 
     const handleChange = (field: keyof CreateCalendarEventDto, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -194,36 +206,39 @@ export function CreateEventDialog({ onEventCreated, onSubmitOverride, defaultTyp
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Tipo</Label>
-                            {defaultType ? (
-                                <>
-                                    <Input
-                                        disabled
-                                        value={
-                                            defaultType === CalendarEventType.MINISTRY ? 'Ministerio' :
-                                                defaultType === CalendarEventType.SMALL_GROUP ? 'Grupo Pequeño' :
-                                                    defaultType === CalendarEventType.CHURCH ? 'Iglesia' : 'Personal'
-                                        }
-                                        className="bg-slate-100 font-bold text-slate-500"
-                                    />
-                                    {/* Hidden input to keep value in form */}
-                                    <input type="hidden" value={defaultType} />
-                                </>
-                            ) : (
-                                <Select
-                                    value={formData.type}
-                                    onValueChange={(val) => handleChange('type', val)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value={CalendarEventType.PERSONAL}>Personal</SelectItem>
-                                        {canCreateMinistry && <SelectItem value={CalendarEventType.MINISTRY}>Ministerio</SelectItem>}
-                                        <SelectItem value={CalendarEventType.SMALL_GROUP}>Grupo Pequeño</SelectItem>
-                                        {canCreateChurch && <SelectItem value={CalendarEventType.CHURCH}>Iglesia</SelectItem>}
-                                    </SelectContent>
-                                </Select>
-                            )}
+                            {/* Disable type change if defaultType is provided or if editing a system event */}
+                            <Select
+                                value={formData.type}
+                                onValueChange={(val) => handleChange('type', val)}
+                                disabled={!!defaultType || (isEditing && formData.type !== CalendarEventType.PERSONAL)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.values(CalendarEventType).map(type => {
+                                        const Icon = (LucideIcons as any)[EVENT_TYPE_ICONS[type as CalendarEventType]] || LucideIcons.Calendar;
+                                        return (
+                                            <SelectItem key={type} value={type}>
+                                                <div className="flex items-center gap-2">
+                                                    <Icon className="w-3.5 h-3.5" />
+                                                    <span>{
+                                                        type === CalendarEventType.PERSONAL ? 'Personal' :
+                                                        type === CalendarEventType.MINISTRY ? 'Ministerio' :
+                                                        type === CalendarEventType.SMALL_GROUP ? 'Grupo Pequeño' :
+                                                        type === CalendarEventType.CHURCH ? 'Iglesia' :
+                                                        type === CalendarEventType.COUNSELING ? 'Consejería' :
+                                                        type === CalendarEventType.DISCIPLESHIP ? 'Discipulado' :
+                                                        type === CalendarEventType.FOLLOW_UP ? 'Seguimiento' :
+                                                        type === CalendarEventType.COURSE ? 'Curso' :
+                                                        type === CalendarEventType.ACTIVITY ? 'Actividad' : type
+                                                    }</span>
+                                                </div>
+                                            </SelectItem>
+                                        );
+                                    })}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
                             <Label>Color</Label>
@@ -233,11 +248,13 @@ export function CreateEventDialog({ onEventCreated, onSubmitOverride, defaultTyp
                                     value={formData.color}
                                     onChange={(e) => handleChange('color', e.target.value)}
                                     className="w-12 h-10 p-1"
+                                    disabled={formData.type !== CalendarEventType.PERSONAL}
                                 />
                                 <Input
                                     value={formData.color}
                                     onChange={(e) => handleChange('color', e.target.value)}
                                     className="flex-grow font-mono text-xs uppercase"
+                                    disabled={formData.type !== CalendarEventType.PERSONAL}
                                 />
                             </div>
                         </div>

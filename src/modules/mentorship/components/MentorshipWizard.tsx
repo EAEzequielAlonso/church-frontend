@@ -203,7 +203,7 @@ export function MentorshipWizard() {
         setValue,
         trigger,
         formState: { errors }
-    } = useForm<CreateMentorshipFormValues>({
+    } = useForm<any>({
         resolver: zodResolver(createMentorshipSchema),
         defaultValues: {
             config: {},
@@ -218,6 +218,10 @@ export function MentorshipWizard() {
     const canSelectFormal = (() => {
         if (selectedType === 'DISCIPLESHIP' && !canCreateDiscipleship) return false;
         if (selectedType === 'COUNSELING' && !canCreateCounseling) return false;
+        if (selectedType === 'FOLLOW_UP') {
+            const hasAdminOrAuditor = user?.roles?.includes(FunctionalRole.ADMIN_CHURCH) || user?.roles?.includes(FunctionalRole.AUDITOR);
+            if (!hasAdminOrAuditor) return false;
+        }
         return true;
     })();
     const selectedMode = watch('mode');
@@ -233,7 +237,9 @@ export function MentorshipWizard() {
         if (step === 3) {
             fieldsToValidate = ['config.mainTopic'];
         }
-        if (step === 4) fieldsToValidate = ['mentors', 'participants'];
+        if (step === 4) {
+             fieldsToValidate = selectedMode === 'FORMAL' ? ['mentors', 'participants'] : ['participants'];
+        }
 
         const isStepValid = await trigger(fieldsToValidate as any);
         if (isStepValid) {
@@ -249,13 +255,16 @@ export function MentorshipWizard() {
         setStep((prev) => Math.max(prev - 1, 1));
     };
 
-    const onSubmit = async (data: CreateMentorshipFormValues) => {
+    const onSubmit = async (data: any) => {
         try {
             // Map mainTopic to motive for the API
             const payload = {
                 ...data,
                 motive: data.config?.mainTopic,
             };
+            if (payload.mode === 'INFORMAL') {
+                payload.mentors = [{ churchPersonId: user?.memberId || '', hasUserAccount: true }];
+            }
             const result = await create(payload as any);
             toast.success('Proceso creado exitosamente');
             router.push(`/mentorship/${result.id}`);
@@ -320,7 +329,7 @@ export function MentorshipWizard() {
                     <p className="text-sm text-slate-500 leading-relaxed">Cuidado continuo a visitantes, nuevos creyentes o personas en proceso de integración.</p>
                 </div>
             </div>
-            {errors.type && <p className="text-red-500 text-sm font-medium text-center">{errors.type.message}</p>}
+            {errors.type && <p className="text-red-500 text-sm font-medium text-center">{errors.type.message as string}</p>}
         </div>
     );
 
@@ -364,7 +373,7 @@ export function MentorshipWizard() {
                     <p className="text-sm text-slate-500 leading-relaxed">Un mentor y un guiado. Sin tareas ni aprobación por sistema. Ideal para charlas orgánicas.</p>
                 </div>
             </div>
-            {errors.mode && <p className="text-red-500 text-sm font-medium text-center">{errors.mode.message}</p>}
+            {errors.mode && <p className="text-red-500 text-sm font-medium text-center">{errors.mode.message as string}</p>}
         </div>
     );
 
@@ -383,9 +392,9 @@ export function MentorshipWizard() {
                         <Input
                             placeholder="Ej: Discipulado inicial, Integración, Consejería familiar..."
                             {...register('config.mainTopic')}
-                            className={errors.config?.mainTopic ? "border-red-500 focus-visible:ring-red-500" : ""}
+                            className={(errors.config as any)?.mainTopic ? "border-red-500 focus-visible:ring-red-500" : ""}
                         />
-                        {errors.config?.mainTopic && <p className="text-red-500 text-xs mt-1 font-medium">{errors.config.mainTopic.message}</p>}
+                        {(errors.config as any)?.mainTopic && <p className="text-red-500 text-xs mt-1 font-medium">{(errors.config as any).mainTopic.message as string}</p>}
                     </div>
                 </div>
 
@@ -460,7 +469,8 @@ export function MentorshipWizard() {
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-8">
 
                     {/* Mentor Block */}
-                    <div className="space-y-4">
+                    {selectedMode === 'FORMAL' && (
+                        <div className="space-y-4">
                         <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center">M</div>
                             Seleccionar Mentor / Guía
@@ -489,11 +499,12 @@ export function MentorshipWizard() {
                                 );
                             }}
                         />
-                        {errors.mentors && <p className="text-red-500 text-xs font-medium">{errors.mentors.message}</p>}
+                        {errors.mentors && <p className="text-red-500 text-xs font-medium">{errors.mentors.message as string}</p>}
                     </div>
+                    )}
 
                     {/* Mentee Block */}
-                    <div className="space-y-4 pt-6 border-t border-slate-100">
+                    <div className={cn("space-y-4", selectedMode === 'FORMAL' && "pt-6 border-t border-slate-100")}>
                         <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center">G</div>
                             Seleccionar Persona Guiada
@@ -522,7 +533,7 @@ export function MentorshipWizard() {
                                 );
                             }}
                         />
-                        {errors.participants && <p className="text-red-500 text-xs font-medium">{errors.participants.message}</p>}
+                        {errors.participants && <p className="text-red-500 text-xs font-medium">{errors.participants.message as string}</p>}
                     </div>
 
                 </div>
@@ -538,16 +549,16 @@ export function MentorshipWizard() {
                     <p className="text-slate-500 text-sm mt-1">Verifica que todos los datos estén correctos antes de crear el proceso.</p>
                 </div>
 
-                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-1 sm:p-2 shadow-sm overflow-hidden">
-                    <div className="bg-white rounded-xl p-6 sm:p-8 space-y-6">
+                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-1 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-xl p-4 sm:p-5 space-y-4">
 
-                        <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                                <CheckCircle2 className="w-6 h-6" />
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                <CheckCircle2 className="w-5 h-5" />
                             </div>
                             <div>
-                                <h4 className="font-bold text-lg text-slate-900">Nuevo proceso de {getTypeLabel(selectedType!)}</h4>
-                                <p className="text-sm text-slate-500">Modalidad seleccionada: <strong>{selectedMode}</strong></p>
+                                <h4 className="font-bold text-base text-slate-900">Nuevo proceso de {getTypeLabel(selectedType!)}</h4>
+                                <p className="text-xs text-slate-500">Modalidad seleccionada: <strong>{selectedMode}</strong></p>
                             </div>
                         </div>
 
@@ -558,14 +569,18 @@ export function MentorshipWizard() {
                                     <div className="w-3 h-3 bg-blue-200 rounded-sm"></div> Mentor(es)
                                 </div>
                                 <div className="mt-2 space-y-1">
-                                    {mentorsData?.length > 0 ? (
-                                        mentorsData.map((m: any) => (
-                                            <p key={m.churchPersonId} className="font-bold text-slate-800 text-sm">
-                                                {getSelectedPersonName(m.churchPersonId)}
-                                            </p>
-                                        ))
+                                    {selectedMode === 'FORMAL' ? (
+                                        mentorsData?.length > 0 ? (
+                                            mentorsData.map((m: any) => (
+                                                <p key={m.churchPersonId} className="font-bold text-slate-800 text-sm">
+                                                    {getSelectedPersonName(m.churchPersonId)}
+                                                </p>
+                                            ))
+                                        ) : (
+                                            <p className="font-bold text-slate-800 text-sm">N/A</p>
+                                        )
                                     ) : (
-                                        <p className="font-bold text-slate-800 text-sm">N/A</p>
+                                        <p className="font-bold text-slate-800 text-sm">Tú (Mentor(a))</p>
                                     )}
                                 </div>
                             </div>
@@ -619,7 +634,7 @@ export function MentorshipWizard() {
                     </div>
                 </div>
 
-                {errors.root && <p className="text-red-500 text-sm font-bold text-center">{errors.root.message}</p>}
+                {errors.root && <p className="text-red-500 text-sm font-bold text-center">{errors.root.message as string}</p>}
             </div>
         );
     };
@@ -627,22 +642,22 @@ export function MentorshipWizard() {
     return (
         <div className="flex flex-col h-full bg-slate-50/30 rounded-3xl">
             {/* Headers / Stepper indicators */}
-            <div className="px-4 pt-8 pb-4 md:px-8 max-w-5xl mx-auto w-full overflow-x-auto">
-                <div className="flex items-center justify-between min-w-[600px] mb-8">
+            <div className="px-4 pt-4 pb-8 md:px-8 max-w-5xl mx-auto w-full overflow-x-auto">
+                <div className="flex items-center justify-between min-w-[600px] mb-6">
                     {STEPS.map((s, idx) => (
                         <div key={s.id} className="flex-1 flex items-center relative">
-                            <div className="flex flex-col items-center gap-2 relative z-10 mx-auto">
-                                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300", step > s.id ? "bg-primary text-white" : step === s.id ? "bg-primary shrink-0 ring-4 ring-primary/20 text-white" : "bg-slate-200 text-slate-400")}>
-                                    {step > s.id ? <CheckCircle2 className="w-5 h-5" /> : s.id}
+                            <div className="flex flex-col items-center gap-1.5 relative z-10 mx-auto">
+                                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300", step > s.id ? "bg-primary text-white" : step === s.id ? "bg-primary shrink-0 ring-[3px] ring-primary/20 text-white" : "bg-slate-200 text-slate-400")}>
+                                    {step > s.id ? <CheckCircle2 className="w-4 h-4" /> : s.id}
                                 </div>
-                                <div className="absolute top-12 whitespace-nowrap text-center">
-                                    <span className={cn("block text-xs font-bold uppercase tracking-wider", step >= s.id ? "text-slate-800" : "text-slate-400")}>
+                                <div className="absolute top-10 whitespace-nowrap text-center">
+                                    <span className={cn("block text-[10px] sm:text-xs font-bold uppercase tracking-wider", step >= s.id ? "text-slate-800" : "text-slate-400")}>
                                         {s.title}
                                     </span>
                                 </div>
                             </div>
                             {idx < STEPS.length - 1 && (
-                                <div className={cn("absolute right-0 top-5 w-1/2 h-[2px] transition-colors duration-500", step > s.id ? "bg-primary" : "bg-slate-200")} style={{ right: '-50%' }} />
+                                <div className={cn("absolute right-0 top-4 w-1/2 h-[2px] transition-colors duration-500", step > s.id ? "bg-primary" : "bg-slate-200")} style={{ right: '-50%' }} />
                             )}
                         </div>
                     ))}
@@ -650,7 +665,7 @@ export function MentorshipWizard() {
             </div>
 
             {/* Form Content */}
-            <div className="flex-1 px-4 md:px-8 pb-32 max-w-5xl mx-auto w-full mt-4">
+            <div className="flex-1 px-4 md:px-8 pb-24 max-w-5xl mx-auto w-full mt-0">
                 <form id="wizard-form" onSubmit={handleSubmit(onSubmit)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}>
                     {step === 1 && renderStep1()}
                     {step === 2 && renderStep2()}
@@ -661,7 +676,7 @@ export function MentorshipWizard() {
             </div>
 
             {/* Sticky Footer Navigation */}
-            <div className="fixed bottom-0 left-0 right-0 md:left-72 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 md:p-6 z-40">
+            <div className="fixed bottom-0 left-0 right-0 md:left-72 bg-white/80 backdrop-blur-md border-t border-slate-200 p-3 md:p-4 z-40">
                 <div className="max-w-5xl mx-auto w-full flex items-center justify-between gap-4">
                     <Button
                         type="button"

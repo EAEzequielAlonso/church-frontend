@@ -5,17 +5,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-    Calendar as CalendarIcon,
-    CheckCircle2,
+    AlertCircle,
     Clock,
     MapPin,
+    Calendar,
     ArrowRight,
     MessageSquare,
     ClipboardList,
-    AlertCircle,
-    Flag,
-    Users
+    ChevronLeft,
+    ChevronRight,
+    List,
+    LayoutGrid,
+    User,
+    Users,
+    BookOpen,
+    Star,
+    Briefcase,
+    HeartHandshake,
+    Church,
+    GraduationCap,
+    UserPlus
 } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import {
     format,
     addMonths,
@@ -33,9 +44,9 @@ import {
 import { es } from "date-fns/locale";
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, List, LayoutGrid } from "lucide-react";
+
 import { CreateEventDialog } from './create-event-dialog';
-import { CalendarEventType } from '@/types/agenda';
+import { CalendarEventType, EVENT_TYPE_COLORS, EVENT_TYPE_ICONS } from '@/types/agenda';
 
 export default function AgendaPage() {
     const router = useRouter();
@@ -118,33 +129,60 @@ export default function AgendaPage() {
         events: agenda.events.filter(e => isCurrentMonth(e.startDate)),
     };
 
-    const eventCounts: Record<string, number> = {
-        'SMALL_GROUP': 0, 'MINISTRY': 0, 'DISCIPLESHIP': 0,
-        'COUNSELING': 0, 'FOLLOW_UP': 0, 'COURSE': 0,
-        'ACTIVITY': 0, 'PERSONAL': 0, 'CHURCH': 0, 'OTHER': 0
-    };
-
+    const eventCounts: Record<string, number> = {};
     currentMonthStats.events.forEach(e => {
-        if (eventCounts[e.type] !== undefined) {
-            eventCounts[e.type]++;
-        } else {
-            eventCounts['OTHER']++;
-        }
+        eventCounts[e.type] = (eventCounts[e.type] || 0) + 1;
     });
 
-    const summaryItems = [
-        { label: 'Citas', count: currentMonthStats.sessions, color: 'text-indigo-600', bg: 'bg-indigo-50/50 hover:bg-indigo-100/50' },
-        { label: 'Tareas', count: currentMonthStats.tasks, color: 'text-amber-600', bg: 'bg-amber-50/50 hover:bg-amber-100/50' },
-        { label: 'Grupos', count: eventCounts['SMALL_GROUP'], color: 'text-emerald-600', bg: 'bg-emerald-50/50 hover:bg-emerald-100/50' },
-        { label: 'Ministerios', count: eventCounts['MINISTRY'], color: 'text-blue-600', bg: 'bg-blue-50/50 hover:bg-blue-100/50' },
-        { label: 'Discipulado', count: eventCounts['DISCIPLESHIP'], color: 'text-purple-600', bg: 'bg-purple-50/50 hover:bg-purple-100/50' },
-        { label: 'Consejería', count: eventCounts['COUNSELING'], color: 'text-rose-600', bg: 'bg-rose-50/50 hover:bg-rose-100/50' },
-        { label: 'Seguimiento', count: eventCounts['FOLLOW_UP'], color: 'text-cyan-600', bg: 'bg-cyan-50/50 hover:bg-cyan-100/50' },
-        { label: 'Cursos', count: eventCounts['COURSE'], color: 'text-orange-600', bg: 'bg-orange-50/50 hover:bg-orange-100/50' },
-        { label: 'Actividades', count: eventCounts['ACTIVITY'], color: 'text-teal-600', bg: 'bg-teal-50/50 hover:bg-teal-100/50' },
-        { label: 'Iglesia', count: eventCounts['CHURCH'], color: 'text-red-600', bg: 'bg-red-50/50 hover:bg-red-100/50' },
-        { label: 'Personales', count: eventCounts['PERSONAL'], color: 'text-slate-600', bg: 'bg-slate-100/50 hover:bg-slate-200/50' },
+    // Define the specific order requested by the user
+    const typeOrder = [
+        CalendarEventType.SMALL_GROUP,
+        CalendarEventType.COURSE,
+        CalendarEventType.ACTIVITY,
+        CalendarEventType.COUNSELING,
+        CalendarEventType.DISCIPLESHIP,
+        CalendarEventType.FOLLOW_UP,
+        CalendarEventType.CHURCH,
+        CalendarEventType.MINISTRY,
+        CalendarEventType.PERSONAL,
+        CalendarEventType.OTHER
     ];
+
+    const summaryItems: any[] = [];
+
+    // Add Citas and Tareas if they exist
+    if (currentMonthStats.sessions > 0) {
+        summaryItems.push({ 
+            label: 'Citas', 
+            count: currentMonthStats.sessions, 
+            color: 'text-indigo-600', 
+            bg: 'bg-indigo-50/50 hover:bg-indigo-100/50',
+            icon: 'Clock'
+        });
+    }
+    if (currentMonthStats.tasks > 0) {
+        summaryItems.push({ 
+            label: 'Tareas', 
+            count: currentMonthStats.tasks, 
+            color: 'text-amber-600', 
+            bg: 'bg-amber-50/50 hover:bg-amber-100/50',
+            icon: 'AlertCircle'
+        });
+    }
+
+    // Add Event Types according to the order, only if count > 0
+    typeOrder.forEach(type => {
+        const count = eventCounts[type] || 0;
+        if (count > 0) {
+            const hexColor = EVENT_TYPE_COLORS[type] || '#94a3b8';
+            summaryItems.push({
+                label: getEventLabel(type),
+                count: count,
+                hexColor: hexColor,
+                icon: EVENT_TYPE_ICONS[type] || 'Calendar'
+            });
+        }
+    });
 
     if (isLoading) {
         return (
@@ -202,7 +240,7 @@ export default function AgendaPage() {
 
                         <div className="flex items-center justify-between mb-2">
                             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <CalendarIcon className="w-5 h-5 text-indigo-500" />
+                                <Calendar className="w-5 h-5 text-indigo-500" />
                                 Próximas Actividades
                             </h2>
                             <Badge variant="secondary" className="bg-indigo-50 text-indigo-600 border-none font-bold text-[10px]">
@@ -236,7 +274,10 @@ export default function AgendaPage() {
                                                         <h3 className="font-bold text-slate-900 text-lg leading-tight group-hover:text-primary transition-colors">
                                                             {event.title}
                                                         </h3>
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider ${event.color ? 'text-white' : 'bg-slate-100 text-slate-600'}`} style={event.color ? { backgroundColor: event.color } : {}}>
+                                                        <span 
+                                                            className="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider text-white" 
+                                                            style={{ backgroundColor: EVENT_TYPE_COLORS[event.type as CalendarEventType] || '#94a3b8' }}
+                                                        >
                                                             {getEventLabel(event.type)}
                                                         </span>
                                                     </div>
@@ -335,7 +376,7 @@ export default function AgendaPage() {
                             </div>
                         ) : (
                             <Card className="border-dashed py-16 text-center bg-slate-50/30">
-                                <CalendarIcon className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                                <Calendar className="w-16 h-16 text-slate-200 mx-auto mb-4" />
                                 <h3 className="text-lg font-bold text-slate-500">Agenda Libre</h3>
                                 <p className="text-slate-400 text-sm max-w-xs mx-auto">No tienes ninguna actividad programada próximamente.</p>
                             </Card>
@@ -362,12 +403,33 @@ export default function AgendaPage() {
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
-                                    {summaryItems.map((item, idx) => (
-                                        <div key={idx} className={`p-2 rounded-xl border border-slate-100 flex flex-col justify-center items-center transition-colors ${item.bg}`}>
-                                            <p className={`text-lg font-black ${item.color}`}>{item.count}</p>
-                                            <p className="text-[8px] font-bold text-slate-500 uppercase text-center mt-1 leading-tight tracking-wider">{item.label}</p>
-                                        </div>
-                                    ))}
+                                    {summaryItems.map((item, idx) => {
+                                        const IconComponent = (LucideIcons as any)[item.icon] || LucideIcons.Calendar;
+                                        return (
+                                            <div 
+                                                key={idx} 
+                                                className={`p-2 rounded-xl border flex flex-col justify-center items-center transition-colors ${item.bg || ''}`}
+                                                style={{ 
+                                                    borderColor: item.hexColor ? `${item.hexColor}20` : undefined,
+                                                    backgroundColor: item.hexColor ? `${item.hexColor}08` : undefined
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <IconComponent 
+                                                        className="w-3 h-3 opacity-70" 
+                                                        style={{ color: item.hexColor || undefined }} 
+                                                    />
+                                                    <p 
+                                                        className={`text-lg font-black ${item.color || ''}`}
+                                                        style={{ color: item.hexColor || undefined }}
+                                                    >
+                                                        {item.count}
+                                                    </p>
+                                                </div>
+                                                <p className="text-[8px] font-bold text-slate-500 uppercase text-center leading-tight tracking-wider line-clamp-1">{item.label}</p>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </CardContent>
                         </Card>
@@ -413,7 +475,7 @@ function CalendarView({ agenda, currentMonth, setCurrentMonth, router }: any) {
             <CardHeader className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex flex-row items-center justify-between">
                 <div>
                     <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
-                        <CalendarIcon className="w-5 h-5 text-primary-foreground opacity-80" />
+                        <Calendar className="w-5 h-5 text-primary-foreground opacity-80" />
                         {format(currentMonth, "MMMM yyyy", { locale: es })}
                     </CardTitle>
                     <CardDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-tighter mt-1">
@@ -555,20 +617,22 @@ function CalendarView({ agenda, currentMonth, setCurrentMonth, router }: any) {
                                         const d = safeDate(e.startDate);
                                         if (!d) return null;
                                         return (
-                                            <div
-                                                key={e.id}
-                                                className="p-1.5 px-2 rounded-lg text-white text-[9px] font-bold leading-tight cursor-pointer transition-all shadow-sm hover:scale-[1.02] border border-white/20 overflow-hidden"
-                                                style={{ backgroundColor: e.color || '#6366f1' }}
-                                                title={e.title}
-                                            >
-                                                <div className="flex items-center gap-1 mb-0.5 opacity-80">
-                                                    <Clock className="w-2.5 h-2.5" />
-                                                    <span>{e.isAllDay ? 'Todo el día' : format(d, "HH:mm")}</span>
+                                                <div
+                                                    key={e.id}
+                                                    className="p-1.5 px-2 rounded-lg text-white text-[9px] font-bold leading-tight cursor-pointer transition-all shadow-sm hover:scale-[1.02] border border-white/20 overflow-hidden flex items-center gap-2"
+                                                    style={{ backgroundColor: EVENT_TYPE_COLORS[e.type as CalendarEventType] || '#6366f1' }}
+                                                    onClick={() => { }}
+                                                    title={e.title}
+                                                >
+                                                    {(() => {
+                                                        const IconName = EVENT_TYPE_ICONS[e.type as CalendarEventType] || 'Calendar';
+                                                        const Icon = (LucideIcons as any)[IconName] || LucideIcons.Calendar;
+                                                        return <Icon className="w-3 h-3 shrink-0 opacity-80" />;
+                                                    })()}
+                                                    <div className="truncate flex-grow">
+                                                        {e.title}
+                                                    </div>
                                                 </div>
-                                                <div className="truncate">
-                                                    {e.title}
-                                                </div>
-                                            </div>
                                         )
                                     })}
                                 </div>

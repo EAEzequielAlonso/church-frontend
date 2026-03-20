@@ -1,4 +1,4 @@
-import { MentorshipType, MentorshipStatus } from './mentorship.types';
+import { MentorshipType, MentorshipStatus, MentorshipParticipant } from './mentorship.types';
 
 export interface MentorshipMeeting {
     id: string;
@@ -15,27 +15,27 @@ export interface MentorshipMeeting {
 export interface MentorshipNote {
     id: string;
     content: string;
-    type: string;
+    type: 'INTERNAL' | 'SHARED' | 'SUPERVISION';
     createdAt: string;
     authorChurchPersonId: string;
 }
 
-export interface MentorshipParticipant {
-    id: string;
-    churchPersonId: string;
-    role: 'MENTOR' | 'PARTICIPANT';
-    status: 'PENDING' | 'AUTO_ACCEPTED' | 'ACCEPTED';
-    joinedAt: string;
-}
+
 
 export interface MentorshipTask {
     id: string;
     title: string;
     description?: string;
     dueDate?: string;
-    isCompleted: boolean;
+    status: 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'REVIEWED';
+    isGroupTask: boolean;
     assignedChurchPersonId?: string;
     creatorChurchPersonId: string;
+    mentorInstruction?: string;
+    menteeResponse?: string;
+    mentorFeedback?: string;
+    completedAt?: string;
+    meetingId?: string;
 }
 
 export interface MentorshipDetail {
@@ -45,6 +45,9 @@ export interface MentorshipDetail {
     status: MentorshipStatus;
     churchId: string;
     createdAt: string;
+    motive?: string;
+    mentorSummary?: string;
+    menteeSummary?: string;
     startDate?: string;
     endDate?: string;
     participants: MentorshipParticipant[];

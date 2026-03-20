@@ -46,20 +46,31 @@ export function TransactionsFilter({ categories, accounts, onFilterChange, initi
     };
 
     const handleClear = () => {
-        // Reset to current month
+        // Reset local state to current month
         const now = new Date();
-        setStartDate(new Date(now.getFullYear(), now.getMonth(), 1));
-        setEndDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-        setType(undefined);
-        setCategoryId(undefined);
-        setAccountId(undefined);
+        setStartDate(start);
+        setEndDate(end);
+        setType('all');
+        setCategoryId('all');
+        setAccountId('all');
+
+        // IMPORTANT: Trigger parent filter change immediately
+        onFilterChange({
+            startDate: start,
+            endDate: end,
+            type: undefined,
+            categoryId: undefined,
+            accountId: undefined
+        });
     };
 
     // Filter categories based on selected type
     const filteredCategories = categories.filter(c => {
         if (!type || type === 'all' || type === 'transfer') return true;
-        return c.type === type; // type is now lowercase 'income' or 'expense'
+        return (c.type as string).toLowerCase() === type.toLowerCase();
     });
 
     return (
@@ -147,15 +158,17 @@ export function TransactionsFilter({ categories, accounts, onFilterChange, initi
                 </SelectContent>
             </Select>
 
-            <Button onClick={handleFilter} className="h-9 bg-slate-900 text-white hover:bg-slate-800">
-                <ListFilter className="mr-2 h-4 w-4" />
-                Filtrar
-            </Button>
+            <div className="flex gap-2 ml-auto">
+                <Button variant="ghost" size="sm" onClick={handleClear} className="h-9 text-slate-500 hover:text-rose-600" title="Limpiar todos los filtros">
+                    <FilterX className="mr-2 h-4 w-4" />
+                    Limpiar
+                </Button>
 
-            <Button variant="ghost" size="sm" onClick={handleClear} className="ml-auto h-9 text-slate-500 hover:text-rose-600" title="Limpiar todos los filtros">
-                <FilterX className="mr-2 h-4 w-4" />
-                Limpiar
-            </Button>
+                <Button onClick={handleFilter} className="h-9 bg-slate-900 text-white hover:bg-slate-800">
+                    <ListFilter className="mr-2 h-4 w-4" />
+                    Filtrar
+                </Button>
+            </div>
         </div>
     );
 }

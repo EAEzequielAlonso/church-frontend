@@ -9,7 +9,7 @@ export type CreateMentorshipMeetingFormValues = z.infer<typeof createMentorshipM
 
 export const createMentorshipNoteSchema = z.object({
     content: z.string().min(1, "El contenido de la nota no puede estar vacío"),
-    isPrivate: z.boolean(),
+    type: z.enum(['INTERNAL', 'SHARED', 'SUPERVISION']),
 });
 
 export type CreateMentorshipNoteFormValues = z.infer<typeof createMentorshipNoteSchema>;
@@ -17,9 +17,11 @@ export type CreateMentorshipNoteFormValues = z.infer<typeof createMentorshipNote
 export const createMentorshipTaskSchema = z.object({
     title: z.string().min(1, "El título de la tarea es obligatorio"),
     description: z.string().optional(),
+    mentorInstruction: z.string().optional(),
     dueDate: z.date().optional(),
     isGroupTask: z.boolean(),
-    assignedChurchPersonId: z.string().optional()
+    assignedChurchPersonId: z.string().optional(),
+    meetingId: z.string().optional(),
 });
 
 export type CreateMentorshipTaskFormValues = z.infer<typeof createMentorshipTaskSchema>;

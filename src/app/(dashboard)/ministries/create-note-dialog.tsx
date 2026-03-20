@@ -89,9 +89,8 @@ export function CreateNoteDialog({ open, onOpenChange, ministryId, eventId, isLe
 
         try {
             const token = localStorage.getItem('accessToken');
-            // Fixed URL to match controller POST: @Post('events/:eventId/notes')
-            // It updates if exists due to logic in service createOrUpdateNote
-            const url = `${process.env.NEXT_PUBLIC_API_URL}/ministries/events/${eventId}/notes`;
+            // Fixed URL to match controller POST: @Post(':id/events/:eventId/notes')
+            const url = `${process.env.NEXT_PUBLIC_API_URL}/ministries/${ministryId}/events/${eventId}/notes`;
 
             const res = await fetch(url, {
                 method: 'POST',

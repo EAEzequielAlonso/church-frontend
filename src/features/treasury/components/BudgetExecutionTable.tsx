@@ -3,50 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/context/AuthContext';
 import { useBudgetExecution } from '../hooks/useBudgetExecution';
-import { useMinistries } from '../hooks/useMinistries';
-import { useCategories } from '../hooks/useCategories';
-import { BudgetExecutionStatus, BudgetLineType } from '../types/budget.types';
+import { BudgetExecutionStatus } from '../types/budget.types';
 import { formatCurrency } from '../utils/currency';
 
 interface BudgetExecutionTableProps {
-    year: number;
-    month: number;
+    periodId: string;
 }
 
-// Removed inline formatCurrency
-
-export function BudgetExecutionTable({ year, month }: BudgetExecutionTableProps) {
-    const { churchId } = useAuth();
-    const { executionData, isLoading, error } = useBudgetExecution(churchId || '', year, month);
-    const { ministries } = useMinistries();
-    const { categories: incomeCats } = useCategories('income');
-    const { categories: expenseCats } = useCategories('expense');
-
-    const allCategories = [...incomeCats, ...expenseCats];
-
-    const ministryMap = useMemo(() => {
-        const map = new Map<string, string>();
-        ministries.forEach(m => map.set(m.id, m.name));
-        return map;
-    }, [ministries]);
-
-    const categoryMap = useMemo(() => {
-        const map = new Map<string, string>();
-        allCategories.forEach(c => map.set(c.id, c.name));
-        return map;
-    }, [allCategories]);
-
-    const getMinistryName = (id?: string | null) => {
-        if (!id) return '-';
-        return ministryMap.get(id) || 'Desconocido';
-    };
-
-    const getCategoryName = (id?: string | null) => {
-        if (!id) return '-';
-        return categoryMap.get(id) || 'Desconocido';
-    };
+export function BudgetExecutionTable({ periodId }: BudgetExecutionTableProps) {
+    const { executionData, isLoading, error } = useBudgetExecution(periodId);
 
     const getStatusBadge = (status: BudgetExecutionStatus) => {
         switch (status) {
@@ -64,9 +30,7 @@ export function BudgetExecutionTable({ year, month }: BudgetExecutionTableProps)
     if (isLoading) {
         return (
             <Card>
-                <CardHeader>
-                    <CardTitle>Ejecución Presupuestaria</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Ejecución Presupuestaria</CardTitle></CardHeader>
                 <CardContent className="flex justify-center py-8">
                     <p className="text-slate-500 text-sm font-medium">Cargando datos...</p>
                 </CardContent>
@@ -77,9 +41,7 @@ export function BudgetExecutionTable({ year, month }: BudgetExecutionTableProps)
     if (error) {
         return (
             <Card>
-                <CardHeader>
-                    <CardTitle>Ejecución Presupuestaria</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Ejecución Presupuestaria</CardTitle></CardHeader>
                 <CardContent className="flex justify-center py-8">
                     <p className="text-rose-500 text-sm font-medium">Error al cargar la ejecución.</p>
                 </CardContent>
@@ -87,93 +49,133 @@ export function BudgetExecutionTable({ year, month }: BudgetExecutionTableProps)
         );
     }
 
-    if (!executionData || executionData.length === 0) {
+    if (!executionData || executionData.allocations.length === 0) {
         return (
             <Card>
-                <CardHeader>
-                    <CardTitle>Ejecución Presupuestaria</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Ejecución Presupuestaria</CardTitle></CardHeader>
                 <CardContent className="flex justify-center py-8">
-                    <p className="text-slate-500 text-sm font-medium">No hay presupuesto configurado para este mes.</p>
+                    <p className="text-slate-500 text-sm font-medium">No hay asignaciones configuradas para este período.</p>
                 </CardContent>
             </Card>
         );
     }
 
+    const { coherence, allocations } = executionData;
+
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Ejecución Presupuestaria</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="rounded-md border border-slate-100 overflow-hidden">
-                    <Table>
-                        <TableHeader className="bg-slate-50">
-                            <TableRow>
-                                <TableHead>Tipo</TableHead>
-                                <TableHead>Ministerio</TableHead>
-                                <TableHead>Categoría</TableHead>
-                                <TableHead className="text-right">Presupuestado</TableHead>
-                                <TableHead className="text-right">Ejecutado</TableHead>
-                                <TableHead className="w-[150px]">Progreso</TableHead>
-                                <TableHead className="text-center w-[120px]">Estado</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {executionData.map((line, idx) => {
-                                const isIncome = line.type === BudgetLineType.INCOME;
+        <div className="space-y-4">
+            {/* Coherence Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                    <CardContent className="pt-4 pb-3 px-4">
+                        <p className="text-xs text-slate-500 mb-1">Ingresos Presupuestados</p>
+                        <p className="text-lg font-bold text-emerald-600">{formatCurrency(coherence.totalIncomeBudgeted)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-4 pb-3 px-4">
+                        <p className="text-xs text-slate-500 mb-1">Ingresos Reales</p>
+                        <p className="text-lg font-bold text-emerald-700">{formatCurrency(coherence.totalIncomeActual)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-4 pb-3 px-4">
+                        <p className="text-xs text-slate-500 mb-1">Gastos Presupuestados</p>
+                        <p className="text-lg font-bold text-rose-600">{formatCurrency(coherence.totalExpenseBudgeted)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-4 pb-3 px-4">
+                        <p className="text-xs text-slate-500 mb-1">Gastos Reales</p>
+                        <p className="text-lg font-bold text-rose-700">{formatCurrency(coherence.totalExpenseActual)}</p>
+                    </CardContent>
+                </Card>
+            </div>
 
-                                // Deterministic key for the iteration
-                                // Optional chaining is not necessary since line properties exist even if undefined, 
-                                // but we must ensure a string is joined safely.
-                                // If the backend added "id" to execution lines in the future, we could prefer `line.id`.
-                                const rowKey = `${line.type}-${line.ministryId || 'null'}-${line.categoryId || 'null'}`;
+            {/* Balance */}
+            <div className="grid grid-cols-2 gap-4">
+                <Card>
+                    <CardContent className="pt-4 pb-3 px-4">
+                        <p className="text-xs text-slate-500 mb-1">Balance Proyectado</p>
+                        <p className={`text-lg font-bold ${coherence.projectedBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {formatCurrency(coherence.projectedBalance)}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-4 pb-3 px-4">
+                        <p className="text-xs text-slate-500 mb-1">Balance Real</p>
+                        <p className={`text-lg font-bold ${coherence.actualBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {formatCurrency(coherence.actualBalance)}
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
 
-                                // Calculo de porcentaje (manejo estricto de div por cero)
-                                const percentage = line.budgetedAmount > 0
-                                    ? Math.round((line.executedAmount / line.budgetedAmount) * 100)
-                                    : (line.executedAmount > 0 ? 100 : 0);
+            {/* Execution Table */}
+            <Card>
+                <CardHeader><CardTitle>Detalle por Asignación</CardTitle></CardHeader>
+                <CardContent>
+                    <div className="rounded-md border border-slate-100 overflow-hidden">
+                        <Table>
+                            <TableHeader className="bg-slate-50">
+                                <TableRow>
+                                    <TableHead>Tipo</TableHead>
+                                    <TableHead>Ministerio</TableHead>
+                                    <TableHead>Categoría</TableHead>
+                                    <TableHead className="text-right">Presupuestado</TableHead>
+                                    <TableHead className="text-right">Ejecutado</TableHead>
+                                    <TableHead className="text-right">Restante</TableHead>
+                                    <TableHead className="w-[150px]">Progreso</TableHead>
+                                    <TableHead className="text-center w-[120px]">Estado</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {allocations.map((alloc) => {
+                                    const isIncome = alloc.type === 'income';
+                                    const percentage = Math.min(Math.round(alloc.usagePercentage), 999);
 
-                                return (
-                                    <TableRow key={rowKey} className="hover:bg-slate-50/50">
-                                        <TableCell>
-                                            <span className={`font-medium ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                {isIncome ? 'Ingreso' : 'Egreso'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-slate-600">
-                                            {getMinistryName(line.ministryId)}
-                                        </TableCell>
-                                        <TableCell className="text-slate-600">
-                                            {getCategoryName(line.categoryId)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium text-slate-700">
-                                            {formatCurrency(line.budgetedAmount)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium text-slate-700">
-                                            {formatCurrency(line.executedAmount)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-col gap-1.5">
-                                                <div className="flex items-center justify-between text-xs text-slate-500">
-                                                    <span>{percentage}%</span>
+                                    return (
+                                        <TableRow key={alloc.allocationId} className="hover:bg-slate-50/50">
+                                            <TableCell>
+                                                <span className={`font-medium ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {isIncome ? 'Ingreso' : 'Egreso'}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-slate-600">
+                                                {alloc.ministry?.name || '-'}
+                                            </TableCell>
+                                            <TableCell className="text-slate-600">
+                                                {alloc.category?.name || '-'}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium text-slate-700">
+                                                {formatCurrency(alloc.allocatedAmount)}
+                                            </TableCell>
+                                            <TableCell className="text-right font-medium text-slate-700">
+                                                {formatCurrency(alloc.executedAmount)}
+                                            </TableCell>
+                                            <TableCell className={`text-right font-medium ${alloc.remainingAmount < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
+                                                {formatCurrency(alloc.remainingAmount)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="flex items-center justify-between text-xs text-slate-500">
+                                                        <span>{percentage}%</span>
+                                                    </div>
+                                                    <Progress value={Math.min(percentage, 100)} className="h-2" />
                                                 </div>
-                                                <Progress
-                                                    value={Math.min(percentage, 100)}
-                                                    className="h-2"
-                                                />
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            {getStatusBadge(line.status)}
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                {getStatusBadge(alloc.status as BudgetExecutionStatus)}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 }

@@ -6,7 +6,8 @@ import {
     GroupType,
     CreateMeetingDto,
     AddParticipantDto,
-    RegisterAttendanceDto
+    RegisterAttendanceDto,
+    BulkAddParticipantsDto
 } from '../types/group.types';
 
 export const groupsApi = {
@@ -57,6 +58,11 @@ export const groupsApi = {
         await api.delete(`/groups/${groupId}/participants/${participantId}`);
     },
 
+    bulkAddParticipants: async (groupId: string, payload: BulkAddParticipantsDto) => {
+        const { data } = await api.post(`/groups/${groupId}/participants/bulk`, payload);
+        return data;
+    },
+
     updateParticipantRole: async (groupId: string, participantId: string, role: string) => {
         const { data } = await api.patch(`/groups/${groupId}/participants/${participantId}/role`, { role });
         return data;
@@ -68,13 +74,22 @@ export const groupsApi = {
         return data;
     },
 
-    registerAttendance: async (meetingId: string, payload: RegisterAttendanceDto) => {
-        const { data } = await api.post(`/groups/meetings/${meetingId}/attendance`, payload);
+    updateMeeting: async (groupId: string, meetingId: string, payload: Partial<CreateMeetingDto>) => {
+        const { data } = await api.patch(`/groups/${groupId}/meetings/${meetingId}`, payload);
         return data;
     },
 
-    getMeetingAttendance: async (meetingId: string) => {
-        const { data } = await api.get(`/groups/meetings/${meetingId}/attendance`);
+    deleteMeeting: async (groupId: string, meetingId: string): Promise<void> => {
+        await api.delete(`/groups/${groupId}/meetings/${meetingId}`);
+    },
+
+    registerAttendance: async (groupId: string, meetingId: string, payload: RegisterAttendanceDto) => {
+        const { data } = await api.post(`/groups/${groupId}/meetings/${meetingId}/attendance`, payload);
+        return data;
+    },
+
+    getMeetingAttendance: async (groupId: string, meetingId: string) => {
+        const { data } = await api.get(`/groups/${groupId}/meetings/${meetingId}/attendance`);
         return data;
     }
 };

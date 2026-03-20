@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { startOfMonth, endOfMonth } from "date-fns"
 import { ReportsFilters } from "../components/reports/ReportsFilters"
+import { useTransactions } from "../hooks/useTransactions"
 import { ReportsSummary } from "../components/reports/ReportsSummary"
 import { CashflowChart } from "../components/reports/CashflowChart"
 import { CategoryBreakdown } from "../components/reports/CategoryBreakdown"
@@ -11,6 +12,7 @@ import { useReportsSummary, useReportsCashflow, useReportsBreakdown, useReportsG
 export default function ReportsPage() {
     const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
     const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
+    const [isExporting, setIsExporting] = useState(false);
 
     const handleDateChange = (start: Date, end: Date) => {
         setStartDate(start);
@@ -22,6 +24,33 @@ export default function ReportsPage() {
     const { cashflow, isLoading: cashflowLoading } = useReportsCashflow(startDate, endDate);
     const { incomeCategories, expenseCategories, isLoading: breakdownLoading } = useReportsBreakdown(startDate, endDate);
     const { accounts, isLoading: accountsLoading } = useReportsGeneral();
+    const { transactions } = useTransactions({ startDate, endDate, includeHistory: false });
+
+    const handlePdfExport = async () => {
+        if (!summary || !transactions) return;
+        setIsExporting(true);
+        try {
+            const { generateTreasuryPdf } = await import("../utils/generateTreasuryPdf");
+            await generateTreasuryPdf({
+                churchName: "Tesorería Central",
+                startDate,
+                endDate,
+                summary: {
+                    income: summary.income.value,
+                    expense: summary.expense.value,
+                    net: summary.net.value,
+                },
+                transactions,
+                incomeCategories: (incomeCategories as any[]) || [],
+                expenseCategories: (expenseCategories as any[]) || [],
+                accounts: (accounts as any[]) || [],
+            });
+        } catch (error) {
+            console.error("PDF Export error:", error);
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -38,6 +67,8 @@ export default function ReportsPage() {
                 startDate={startDate}
                 endDate={endDate}
                 onDateChange={handleDateChange}
+                onPdfExport={handlePdfExport}
+                isExporting={isExporting}
             />
 
             {/* KPI Cards */}

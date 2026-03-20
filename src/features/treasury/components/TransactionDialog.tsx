@@ -35,6 +35,8 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
     const dateToCheck = transactionToEdit ? new Date(transactionToEdit.date) : new Date();
     const { isClosed: isPeriodClosed } = useIsPeriodClosed(churchId || '', dateToCheck.getFullYear(), dateToCheck.getMonth() + 1);
 
+    const isFinancialEditDisabled = !!transactionToEdit && transactionToEdit.status === 'completed'; // mapped from backend
+
     const [type, setType] = useState<TransactionType>(TransactionType.INCOME);
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
@@ -50,8 +52,8 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
     const [exchangeRate, setExchangeRate] = useState('1');
     const [ministryId, setMinistryId] = useState<string>('none');
 
-    // Filter ASSET accounts for actual money movement
-    const assetAccounts = accounts.filter(a => a.type === AccountType.ASSET);
+    // Filter ASSET accounts for actual money movement (excluding archived)
+    const assetAccounts = accounts.filter(a => a.type === AccountType.ASSET && !a.isArchived);
 
     // Initial Load for Edit
     useEffect(() => {
@@ -139,16 +141,29 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
         };
 
         if (transactionToEdit) {
-            await updateHook.execute(transactionToEdit.id, {
-                ...common,
+            const updatePayload: any = {
+                churchId,
                 id: transactionToEdit.id,
-                userId: user.id
-            }, () => {
+                userId: user.id,
+                description,
+                ministryId: (type === TransactionType.EXPENSE && ministryId !== 'none') ? ministryId : undefined,
+                reason: reason.trim() || undefined,
+            };
+
+            if (!isFinancialEditDisabled) {
+                updatePayload.amount = parseFloat(amount);
+                updatePayload.currency = currency;
+                updatePayload.exchangeRate = parseFloat(exchangeRate) || 1;
+                updatePayload.categoryId = categoryId;
+                updatePayload.sourceAccountId = sourceAccountId;
+                updatePayload.destinationAccountId = destinationAccountId;
+            }
+
+            await updateHook.execute(transactionToEdit.id, updatePayload, () => {
                 onOpenChange(false);
                 onSuccess?.();
             });
         } else {
-            // Check for valid IDs based on type before submitting? form required should handle it
             await createHook.execute({
                 ...common,
             }, () => {
@@ -157,6 +172,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
             });
         }
     };
+
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -178,7 +194,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Monto</label>
-                        <Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required />
+                        <Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required disabled={isFinancialEditDisabled} />
                     </div>
 
                     <div className="space-y-2">
@@ -191,16 +207,16 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                         <>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Categoría (Ingreso)</label>
-                                <Select onValueChange={setSourceId} value={sourceId} required>
+                                <Select onValueChange={setSourceId} value={sourceId} required disabled={isFinancialEditDisabled}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar Categoría" /></SelectTrigger>
                                     <SelectContent>
-                                        {incomeCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                        {incomeCategories.filter(c => !c.isArchived || c.id === sourceId).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Cuenta Destino</label>
-                                <Select onValueChange={setDestId} value={destId} required>
+                                <Select onValueChange={setDestId} value={destId} required disabled={isFinancialEditDisabled}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar Cuenta" /></SelectTrigger>
                                     <SelectContent>
                                         {assetAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
@@ -213,7 +229,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                         <>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Cuenta Origen</label>
-                                <Select onValueChange={setSourceId} value={sourceId} required>
+                                <Select onValueChange={setSourceId} value={sourceId} required disabled={isFinancialEditDisabled}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar Cuenta" /></SelectTrigger>
                                     <SelectContent>
                                         {assetAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
@@ -222,10 +238,10 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Categoría (Gasto)</label>
-                                <Select onValueChange={setDestId} value={destId} required>
+                                <Select onValueChange={setDestId} value={destId} required disabled={isFinancialEditDisabled}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar Categoría" /></SelectTrigger>
                                     <SelectContent>
-                                        {expenseCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                        {expenseCategories.filter(c => !c.isArchived || c.id === destId).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -252,7 +268,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                         <>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Cuenta Origen</label>
-                                <Select onValueChange={setSourceId} value={sourceId} required>
+                                <Select onValueChange={setSourceId} value={sourceId} required disabled={isFinancialEditDisabled}>
                                     <SelectTrigger><SelectValue placeholder="Desde" /></SelectTrigger>
                                     <SelectContent>
                                         {assetAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
@@ -261,7 +277,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Cuenta Destino</label>
-                                <Select onValueChange={setDestId} value={destId} required>
+                                <Select onValueChange={setDestId} value={destId} required disabled={isFinancialEditDisabled}>
                                     <SelectTrigger><SelectValue placeholder="Hasta" /></SelectTrigger>
                                     <SelectContent>
                                         {assetAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
@@ -277,6 +293,7 @@ export function TransactionDialog({ open, onOpenChange, accounts, transactionToE
                                     placeholder="1.00"
                                     value={exchangeRate}
                                     onChange={e => setExchangeRate(e.target.value)}
+                                    disabled={isFinancialEditDisabled}
                                 />
                             </div>
                         </>

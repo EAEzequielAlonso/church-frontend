@@ -230,10 +230,14 @@ export default function DashboardPage() {
                     {mentorships.length > 0 ? (
                         <div className="grid sm:grid-cols-2 gap-4">
                             {mentorships.map((process: any) => (
-                                <div key={process.id} className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group cursor-pointer" onClick={() => router.push(`/mentorships/${process.id}`)}>
+                                <div key={process.id} className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group cursor-pointer" onClick={() => router.push(`/mentorship/${process.id}`)}>
                                     <div className="flex justify-between items-start mb-3">
-                                        <Badge variant="outline" className={`text-[10px] uppercase font-black tracking-widest border-none ${process.type === 'DISCIPLESHIP' ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                                            {process.type === 'DISCIPLESHIP' ? 'Discipulado' : 'Seguimiento'}
+                                        <Badge variant="outline" className={`text-[10px] uppercase font-black tracking-widest border-none ${
+                                            process.type === 'DISCIPLESHIP' ? 'bg-indigo-50 text-indigo-700' : 
+                                            process.type === 'COUNSELING' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+                                        }`}>
+                                            {process.type === 'DISCIPLESHIP' ? 'Discipulado' : 
+                                             process.type === 'COUNSELING' ? 'Consejería' : 'Seguimiento'}
                                         </Badge>
                                         <Badge variant="secondary" className="text-[9px] uppercase tracking-wider bg-slate-100 text-slate-500">
                                             {process.mode === 'FORMAL' ? 'Formal' : 'Informal'}

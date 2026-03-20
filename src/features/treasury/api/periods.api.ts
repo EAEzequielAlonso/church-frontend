@@ -15,8 +15,8 @@ export const periodsApi = {
 
     // Cambiar estado a OPEN y limpiar snapshot
     reopenPeriod: (churchId: string, year: number, month: number): Promise<PeriodModel> =>
-        fetchWithAuth<PeriodModel>('/treasury/periods/reopen', {
+        fetchWithAuth<PeriodModel>(`/treasury/periods/${year}/${month}/reopen`, {
             method: 'POST',
-            body: JSON.stringify({ churchId, year, month })
+            body: JSON.stringify({ churchId, reason: 'Re-apertura manual' }) // Added placeholder reason as backend might require it
         })
 };

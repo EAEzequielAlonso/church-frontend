@@ -17,6 +17,7 @@ import { TransactionsTable } from '@/features/treasury/components/TransactionsTa
 import { CorrectionDialog } from '@/features/treasury/components/CorrectionDialog'; // NEW
 import { BudgetsTab } from '@/features/treasury/components/BudgetsTab';
 import { PeriodsTab } from '@/features/treasury/components/PeriodsTab';
+import { ReportsTab } from '@/features/treasury/components/ReportsTab';
 import { isSameMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -27,8 +28,12 @@ import { es } from 'date-fns/locale';
 
 export default function TreasuryPage() {
 
+    // Tab State
+    const [activeTab, setActiveTab] = useState('overview');
+    const [reportDates, setReportDates] = useState<{ start: Date; end: Date } | null>(null);
+
     // Filter State
-    const [showTrash, setShowTrash] = useState(false);
+    const [includeHistory, setIncludeHistory] = useState(false);
     const [filters, setFilters] = useState<any>({
         startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // Start of month
         endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), // End of month
@@ -36,11 +41,11 @@ export default function TreasuryPage() {
 
     const { transactions: displayedTransactions, isLoading: isLoadingTx } = useTransactions({
         ...filters,
-        deleted: showTrash
+        includeHistory: includeHistory
     });
 
     const { accounts, isLoading: isLoadingAcc } = useAccounts();
-    const { categories: incomeCats } = useCategories('income');
+    const { categories: incomeCats, updateCategory, deleteCategory } = useCategories('income');
     const { categories: expenseCats } = useCategories('expense');
     const allCategories = [...incomeCats, ...expenseCats];
 
@@ -49,12 +54,12 @@ export default function TreasuryPage() {
 
     // State
     const [isTxDialogOpen, setIsTxDialogOpen] = useState(false);
-    const [isCorrectionDialogOpen, setIsCorrectionDialogOpen] = useState(false); // NEW
+    const [isCorrectionDialogOpen, setIsCorrectionDialogOpen] = useState(false);
     const [editingTx, setEditingTx] = useState<TreasuryTransactionModel | null>(null);
-    const [correctingTx, setCorrectingTx] = useState<TreasuryTransactionModel | null>(null); // NEW
+    const [correctingTx, setCorrectingTx] = useState<TreasuryTransactionModel | null>(null);
     const [isAccDialogOpen, setIsAccDialogOpen] = useState(false);
     const [editingAcc, setEditingAcc] = useState<TreasuryAccountModel | null>(null);
-    const [editingCategory, setEditingCategory] = useState<TransactionCategory | null>(null); // NEW
+    const [editingCategory, setEditingCategory] = useState<TransactionCategory | null>(null);
     const [accountMode, setAccountMode] = useState<'account' | 'category'>('account');
     const canEdit = true;
 
@@ -64,7 +69,7 @@ export default function TreasuryPage() {
         setIsTxDialogOpen(true);
     };
 
-    const handleCorrectTx = (tx: TreasuryTransactionModel) => { // NEW
+    const handleCorrectTx = (tx: TreasuryTransactionModel) => {
         setCorrectingTx(tx);
         setIsCorrectionDialogOpen(true);
     };
@@ -76,6 +81,14 @@ export default function TreasuryPage() {
     const handleCreateTx = () => {
         setEditingTx(null);
         setIsTxDialogOpen(true);
+    };
+
+    // Auditor/Report Navigation Handler
+    const handleViewMonthlyReport = (year: number, month: number) => {
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0);
+        setReportDates({ start, end });
+        setActiveTab('reports');
     };
 
     // Handlers - Accounts
@@ -99,8 +112,13 @@ export default function TreasuryPage() {
     };
 
     const handleDeleteCategory = async (id: string) => {
-        // TODO: Implement delete category hook
-        console.log("Delete category", id);
+        if (confirm('¿Estás seguro de eliminar esta categoría?')) {
+            await deleteCategory(id);
+        }
+    };
+
+    const handleArchiveCategory = async (cat: TransactionCategory) => {
+        await updateCategory(cat.id, { isArchived: !cat.isArchived });
     };
 
     const handleCreateAcc = (mode: 'account' | 'category' = 'account') => {
@@ -114,7 +132,7 @@ export default function TreasuryPage() {
     const currentMonth = format(new Date(), 'MMMM yyyy', { locale: es });
 
     return (
-        <Tabs defaultValue="overview" className="space-y-6 max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Tesorería</h1>
@@ -125,7 +143,7 @@ export default function TreasuryPage() {
                     <TabsTrigger value="accounts">Cuentas y Categorías</TabsTrigger>
                     <TabsTrigger value="budgets" className="text-emerald-700">Presupuestos</TabsTrigger>
                     <TabsTrigger value="periods" className="text-blue-700">Cierre Mensual</TabsTrigger>
-                    <TabsTrigger value="reports" disabled>Reportes (Próximamente)</TabsTrigger>
+                    <TabsTrigger value="reports">Reportes</TabsTrigger>
                 </TabsList>
             </div>
 
@@ -133,19 +151,19 @@ export default function TreasuryPage() {
                 {/* Header Section */}
                 <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-100">
                     <div>
-                        <h2 className="text-lg font-semibold text-slate-800 capitalize">{showTrash ? 'Papelera de Reciclaje' : 'Resumen del mes'}</h2>
-                        <p className="text-sm text-slate-500">{showTrash ? 'Transacciones eliminadas.' : 'Vista de movimientos filtrados.'}</p>
+                        <h2 className="text-lg font-semibold text-slate-800 capitalize">Resumen del mes</h2>
+                        <p className="text-sm text-slate-500">Vista de movimientos filtrados.</p>
                     </div>
                     <div className="flex gap-2">
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setShowTrash(!showTrash)}
-                            className={showTrash ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'text-slate-500 hover:text-slate-700'}
+                            onClick={() => setIncludeHistory(!includeHistory)}
+                            className={includeHistory ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'text-slate-500 hover:text-slate-700'}
                         >
-                            {showTrash ? 'Ver Activos' : 'Ver Eliminados'}
+                            {includeHistory ? 'Ocultar Historial' : 'Ver Historial Corregido'}
                         </Button>
-                        {canEdit && !showTrash && (
+                        {canEdit && (
                             <Button onClick={handleCreateTx} className="shadow-lg bg-slate-900 hover:bg-slate-800 text-white">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Nueva Transacción
@@ -155,35 +173,31 @@ export default function TreasuryPage() {
                 </div>
 
                 {/* Summary Cards */}
-                {!showTrash && <AccountBalanceCards accounts={accounts} transactions={displayedTransactions} />}
+                <AccountBalanceCards accounts={accounts} transactions={displayedTransactions} />
 
                 {/* Filters */}
-                {!showTrash && (
-                    <div className="mt-6 mb-4">
-                        <TransactionsFilter
-                            categories={allCategories}
-                            accounts={accounts}
-                            initialFilters={filters as any} // Cast to avoid strict type mismatch for now
-                            onFilterChange={(criteria) => {
-                                setFilters((prev: any) => ({ ...prev, ...criteria }));
-                            }}
-                        />
-                    </div>
-                )}
-
-
+                <div className="mt-6 mb-4">
+                    <TransactionsFilter
+                        categories={allCategories}
+                        accounts={accounts}
+                        initialFilters={filters as any} // Cast to avoid strict type mismatch for now
+                        onFilterChange={(criteria) => {
+                            setFilters((prev: any) => ({ ...prev, ...criteria }));
+                        }}
+                    />
+                </div>
 
                 {/* Main Content */}
                 <div className="space-y-6">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{showTrash ? 'Transacciones Eliminadas' : 'Listado de Movimientos'}</h3>
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Listado de Movimientos</h3>
                     <TransactionsTable
                         transactions={displayedTransactions}
                         onEdit={handleEditTx}
                         onDelete={handleDeleteTx}
                         onCorrect={handleCorrectTx}
-                        canEdit={canEdit && !showTrash}
+                        canEdit={canEdit}
                         page={filters.page || 1}
-                        totalPages={useTransactions({ ...filters, deleted: showTrash }).meta?.lastPage || 1}
+                        totalPages={displayedTransactions?.meta?.lastPage || 1}
                         onPageChange={(p) => setFilters((prev: any) => ({ ...prev, page: p }))}
                     />
                 </div>
@@ -241,6 +255,7 @@ export default function TreasuryPage() {
                             canEdit={canEdit}
                             onEdit={handleEditCategory}
                             onDelete={handleDeleteCategory}
+                            onArchive={handleArchiveCategory}
                         />
                     </div>
                 </div>
@@ -251,7 +266,11 @@ export default function TreasuryPage() {
             </TabsContent>
 
             <TabsContent value="periods" className="space-y-4">
-                <PeriodsTab />
+                <PeriodsTab onViewReport={handleViewMonthlyReport} />
+            </TabsContent>
+
+            <TabsContent value="reports" className="space-y-4">
+                <ReportsTab initialDates={reportDates || undefined} />
             </TabsContent>
 
             {/* Dialogs Global */}
@@ -269,6 +288,7 @@ export default function TreasuryPage() {
                             open={isCorrectionDialogOpen}
                             onOpenChange={setIsCorrectionDialogOpen}
                             transactionToCorrect={correctingTx}
+                            accounts={accounts}
                             onSuccess={() => setIsCorrectionDialogOpen(false)}
                         />
                         <AccountDialog

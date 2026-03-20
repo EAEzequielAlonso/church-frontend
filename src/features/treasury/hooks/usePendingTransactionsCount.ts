@@ -10,13 +10,14 @@ export function usePendingTransactionsCount(churchId: string, year: number, mont
             const startDate = new Date(year, month - 1, 1).toISOString();
             const endDate = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
 
-            const data = await treasuryApi.transactions.getAll(churchId, {
+            const res = await treasuryApi.transactions.getAll(churchId, {
                 status: TransactionStatus.PENDING_APPROVAL,
                 startDate,
                 endDate,
             });
 
-            return Array.isArray(data) ? data.length : 0;
+            const array = res?.data || res;
+            return Array.isArray(array) ? array.length : 0;
         },
         enabled: !!churchId && !!year && !!month,
     });

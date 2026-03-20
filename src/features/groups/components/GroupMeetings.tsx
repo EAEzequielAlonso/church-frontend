@@ -6,17 +6,9 @@ import { Calendar, Plus, MapPin, ClipboardList, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { GroupAttendance } from './GroupAttendance';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-    DialogDescription,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { UniversalMeetingCard } from '@/components/shared/UniversalMeetingCard';
+import { CreateEventDialog } from '@/app/(dashboard)/agenda/create-event-dialog';
+import { CalendarEventType, EVENT_TYPE_COLORS } from '@/types/agenda';
 import { groupsApi } from '../api/groups.api';
 import { toast } from 'sonner';
 
@@ -33,37 +25,76 @@ export function GroupMeetings({ meetings, groupId, isAdminOrAuditor, isEnrolled,
     const config = getGroupTypeConfig(groupType);
     const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
 
-    // New Meeting Dialog state
     const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
-    const [meetingDate, setMeetingDate] = useState('');
-    const [meetingLocation, setMeetingLocation] = useState('');
-    const [meetingNotes, setMeetingNotes] = useState('');
+    const [meetingToEdit, setMeetingToEdit] = useState<any>(null);
 
     const sortedMeetings = [...meetings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const handleCreateMeeting = async () => {
-        if (!meetingDate) {
-            toast.error('La fecha del encuentro es obligatoria.');
-            return;
+    const handleDeleteMeeting = async (meetingId: string) => {
+        if (!confirm('¿Estás seguro de que deseas eliminar este encuentro?')) return;
+        try {
+            await groupsApi.deleteMeeting(groupId, meetingId);
+            toast.success('Encuentro eliminado');
+            refetch();
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al eliminar el encuentro');
         }
+    };
+
+    const handleEditMeeting = (meeting: any) => {
+        const calType = 
+            groupType === 'COURSE' ? CalendarEventType.COURSE :
+            groupType === 'ACTIVITY' ? CalendarEventType.ACTIVITY :
+            groupType === 'DISCIPLESHIP' ? CalendarEventType.DISCIPLESHIP :
+            groupType === 'MINISTRY_TEAM' ? CalendarEventType.MINISTRY : CalendarEventType.SMALL_GROUP;
+
+        // Transform GroupMeetingDto to the format expected by CreateEventDialog
+        const eventToEdit = {
+            id: meeting.id,
+            title: format(new Date(meeting.date), "EEEE d 'de' MMMM, yyyy", { locale: es }),
+            description: meeting.notes || '',
+            location: meeting.location || '',
+            startDate: meeting.date,
+            endDate: new Date(new Date(meeting.date).getTime() + 60 * 60 * 1000).toISOString(),
+            type: calType,
+            color: EVENT_TYPE_COLORS[calType],
+            isAllDay: false,
+            ownerId: groupId
+        };
+        setMeetingToEdit(eventToEdit);
+    };
+
+    const handleUpdateMeeting = async (data: any) => {
+        if (!meetingToEdit) return;
+        try {
+            await groupsApi.updateMeeting(groupId, meetingToEdit.id, {
+                date: data.startDate,
+                location: data.location || undefined,
+                notes: data.description || undefined,
+            });
+            setMeetingToEdit(null);
+            refetch();
+        } catch (error) {
+            console.error(error);
+            throw new Error('No se pudo actualizar el encuentro.');
+        }
+    };
+
+    const handleCreateMeeting = async (data: any) => {
         setIsCreating(true);
         try {
             const payload: CreateMeetingDto = {
-                date: new Date(meetingDate).toISOString(),
-                location: meetingLocation || undefined,
-                notes: meetingNotes || undefined,
+                date: data.startDate, // CreateEventDialog provides ISO strings
+                location: data.location || undefined,
+                notes: data.description || undefined,
             };
             await groupsApi.createMeeting(groupId, payload);
-            toast.success('Encuentro registrado correctamente.');
-            setIsNewMeetingOpen(false);
-            setMeetingDate('');
-            setMeetingLocation('');
-            setMeetingNotes('');
             refetch();
         } catch (error) {
-            toast.error('No se pudo registrar el encuentro.');
             console.error(error);
+            throw new Error('No se pudo registrar el encuentro.');
         } finally {
             setIsCreating(false);
         }
@@ -93,10 +124,23 @@ export function GroupMeetings({ meetings, groupId, isAdminOrAuditor, isEnrolled,
                 </div>
 
                 {isAdminOrAuditor && (
-                    <Button size="sm" className="shadow-sm" onClick={() => setIsNewMeetingOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Nuevo Encuentro
-                    </Button>
+                    <CreateEventDialog 
+                        onEventCreated={refetch}
+                        onSubmitOverride={handleCreateMeeting}
+                        defaultType={
+                            groupType === 'COURSE' ? CalendarEventType.COURSE :
+                            groupType === 'ACTIVITY' ? CalendarEventType.ACTIVITY :
+                            groupType === 'DISCIPLESHIP' ? CalendarEventType.DISCIPLESHIP :
+                            groupType === 'MINISTRY_TEAM' ? CalendarEventType.MINISTRY : CalendarEventType.SMALL_GROUP
+                        }
+                        defaultEntityId={groupId}
+                        trigger={
+                            <Button size="sm" className="shadow-sm">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Nuevo Encuentro
+                            </Button>
+                        }
+                    />
                 )}
             </div>
 
@@ -109,102 +153,51 @@ export function GroupMeetings({ meetings, groupId, isAdminOrAuditor, isEnrolled,
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {sortedMeetings.map(meeting => (
-                        <div key={meeting.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-3">
-                                <div>
-                                    <h4 className="font-bold text-slate-800 capitalize">
-                                        {format(new Date(meeting.date), "EEEE d 'de' MMMM, yyyy", { locale: es })}
-                                    </h4>
-                                    <div className="flex items-center text-sm text-slate-500 mt-1">
-                                        <MapPin className="w-3.5 h-3.5 mr-1" />
-                                        {meeting.location || 'Ubicación no especificada'}
-                                    </div>
-                                </div>
-                                <div className="text-xs font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200">
-                                    {meeting.attendances?.length || 0} asistencias
-                                </div>
-                            </div>
-
-                            {meeting.notes && (
-                                <p className="text-sm text-slate-600 line-clamp-2 mb-4 bg-slate-50 p-2 rounded border border-slate-100">
-                                    {meeting.notes}
-                                </p>
-                            )}
-
-                            {(isAdminOrAuditor || isEnrolled) && (
-                                <Button
-                                    variant="outline"
-                                    className="w-full mt-2"
-                                    onClick={() => setSelectedMeetingId(meeting.id)}
-                                >
-                                    <ClipboardList className="w-4 h-4 mr-2" />
-                                    Gestionar Asistencia
-                                </Button>
-                            )}
-                        </div>
+                        <UniversalMeetingCard
+                            key={meeting.id}
+                            id={meeting.id}
+                            date={meeting.date}
+                            title={format(new Date(meeting.date), "EEEE d 'de' MMMM, yyyy", { locale: es })}
+                            timeLabel={format(new Date(meeting.date), "HH:mm")}
+                            location={meeting.location || 'Ubicación no especificada'}
+                            description={meeting.notes}
+                            attendeeCount={meeting.attendances?.length || 0}
+                            isPast={new Date(meeting.date) < new Date()}
+                            type={
+                                groupType === 'COURSE' ? CalendarEventType.COURSE :
+                                groupType === 'ACTIVITY' ? CalendarEventType.ACTIVITY :
+                                groupType === 'DISCIPLESHIP' ? CalendarEventType.DISCIPLESHIP :
+                                groupType === 'MINISTRY_TEAM' ? CalendarEventType.MINISTRY : CalendarEventType.SMALL_GROUP
+                            }
+                            onEdit={isAdminOrAuditor ? () => handleEditMeeting(meeting) : undefined}
+                            onDelete={isAdminOrAuditor ? () => handleDeleteMeeting(meeting.id) : undefined}
+                            actions={
+                                (isAdminOrAuditor || isEnrolled) ? (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full font-bold"
+                                        onClick={() => setSelectedMeetingId(meeting.id)}
+                                    >
+                                        <ClipboardList className="w-4 h-4 mr-2" />
+                                        Asistencia
+                                    </Button>
+                                ) : undefined
+                            }
+                        />
                     ))}
                 </div>
             )}
 
-            {/* New Meeting Dialog */}
-            <Dialog open={isNewMeetingOpen} onOpenChange={setIsNewMeetingOpen}>
-                <DialogContent className="sm:max-w-[420px]">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Calendar className="w-5 h-5 text-indigo-600" />
-                            Registrar Nuevo Encuentro
-                        </DialogTitle>
-                        <DialogDescription>
-                            Ingresá la fecha y opcionalmente la ubicación y notas del encuentro.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-4 pt-2">
-                        <div className="grid gap-2">
-                            <Label htmlFor="meeting-date">Fecha del Encuentro <span className="text-red-500">*</span></Label>
-                            <Input
-                                id="meeting-date"
-                                type="datetime-local"
-                                value={meetingDate}
-                                onChange={(e) => setMeetingDate(e.target.value)}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="meeting-location">Ubicación</Label>
-                            <Input
-                                id="meeting-location"
-                                placeholder="Ej: Salón principal, Zoom..."
-                                value={meetingLocation}
-                                onChange={(e) => setMeetingLocation(e.target.value)}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="meeting-notes">Notas</Label>
-                            <Textarea
-                                id="meeting-notes"
-                                placeholder="Tema tratado, observaciones..."
-                                rows={3}
-                                value={meetingNotes}
-                                onChange={(e) => setMeetingNotes(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <DialogFooter className="pt-4">
-                        <Button variant="outline" onClick={() => setIsNewMeetingOpen(false)} disabled={isCreating}>
-                            Cancelar
-                        </Button>
-                        <Button onClick={handleCreateMeeting} disabled={isCreating || !meetingDate} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                            {isCreating ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Guardando...
-                                </>
-                            ) : 'Guardar Encuentro'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {isAdminOrAuditor && meetingToEdit && (
+                <CreateEventDialog 
+                    onEventCreated={() => { setMeetingToEdit(null); refetch(); }}
+                    onSubmitOverride={handleUpdateMeeting}
+                    eventToEdit={meetingToEdit}
+                    open={!!meetingToEdit}
+                    onOpenChange={(open) => !open && setMeetingToEdit(null)}
+                />
+            )}
         </div>
     );
 }

@@ -4,9 +4,13 @@ import { Input } from '@/components/ui/input';
 import { PeriodClosingPanel } from './PeriodClosingPanel';
 import { PeriodTimeline } from './PeriodTimeline';
 
-export function PeriodsTab() {
+interface PeriodsTabProps {
+    onViewReport?: (year: number, month: number) => void;
+}
+
+export function PeriodsTab({ onViewReport }: PeriodsTabProps) {
     const currentDate = new Date();
-    // Default to the previous month since typically we close the month that just ended.
+    // Default to the previous month
     const defaultDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
 
     const [year, setYear] = useState<number>(defaultDate.getFullYear());
@@ -45,7 +49,11 @@ export function PeriodsTab() {
             </div>
 
             <div className="max-w-4xl">
-                <PeriodClosingPanel year={year} month={month} />
+                <PeriodClosingPanel 
+                    year={year} 
+                    month={month} 
+                    onViewReport={onViewReport}
+                />
 
                 <PeriodTimeline
                     selectedYear={year}

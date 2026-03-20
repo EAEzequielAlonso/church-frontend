@@ -56,13 +56,13 @@ export function useReportsBreakdown(startDate: Date, endDate: Date) {
     const end = endDate.toISOString().split('T')[0];
 
     const { data: incomeCategories, isLoading: incomeLoading } = useSWR(
-        [REPORTS_KEYS.CATEGORIES, start, end, 'INCOME'],
-        () => getCategoryBreakdown(start, end, 'INCOME')
+        [REPORTS_KEYS.CATEGORIES, start, end, 'income'],
+        () => getCategoryBreakdown(start, end, 'income')
     );
 
     const { data: expenseCategories, isLoading: expenseLoading } = useSWR(
-        [REPORTS_KEYS.CATEGORIES, start, end, 'EXPENSE'],
-        () => getCategoryBreakdown(start, end, 'EXPENSE')
+        [REPORTS_KEYS.CATEGORIES, start, end, 'expense'],
+        () => getCategoryBreakdown(start, end, 'expense')
     );
 
     const { data: ministryExpenses, isLoading: ministryLoading } = useSWR(

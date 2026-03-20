@@ -4,18 +4,18 @@ import { BudgetExecutionResponse } from '../types/budget.types';
 
 export const budgetExecutionKeys = {
     all: ['budgetExecution'] as const,
-    detail: (churchId: string, year: number, month: number) => [...budgetExecutionKeys.all, churchId, year, month] as const,
+    detail: (periodId: string) => [...budgetExecutionKeys.all, periodId] as const,
 };
 
-export function useBudgetExecution(churchId: string, year?: number, month?: number) {
+export function useBudgetExecution(periodId: string) {
     const query = useQuery<BudgetExecutionResponse, Error>({
-        queryKey: budgetExecutionKeys.detail(churchId, year!, month!),
-        queryFn: () => budgetApi.getExecution(churchId, year!, month!),
-        enabled: !!churchId && !!year && !!month, // Only fetch if we have the full date criteria
+        queryKey: budgetExecutionKeys.detail(periodId),
+        queryFn: () => budgetApi.getExecution(periodId),
+        enabled: !!periodId,
     });
 
     return {
-        executionData: query.data || [],
+        executionData: query.data || null,
         isLoading: query.isLoading,
         error: query.error,
         refetch: query.refetch,

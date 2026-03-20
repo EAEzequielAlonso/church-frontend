@@ -18,10 +18,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { CreateMentorshipNoteFormValues, createMentorshipNoteSchema } from '../schemas/mentorship-interactions.schema';
 import { useCreateNote } from '../hooks/use-create-note';
-import { createMentorshipNoteSchema, CreateMentorshipNoteFormValues } from '../schemas/mentorship-interactions.schema';
 
 interface MentorshipCreateNoteDialogProps {
     mentorshipId: string;
@@ -42,7 +47,7 @@ export function MentorshipCreateNoteDialog({ mentorshipId, isMentee }: Mentorshi
         resolver: zodResolver(createMentorshipNoteSchema),
         defaultValues: {
             content: '',
-            isPrivate: false
+            type: 'SHARED'
         }
     });
 
@@ -52,7 +57,7 @@ export function MentorshipCreateNoteDialog({ mentorshipId, isMentee }: Mentorshi
                 mentorshipId,
                 payload: {
                     content: data.content,
-                    isPrivate: data.isPrivate
+                    type: data.type
                 }
             });
             toast.success('Nota guardada exitosamente');
@@ -92,26 +97,27 @@ export function MentorshipCreateNoteDialog({ mentorshipId, isMentee }: Mentorshi
                     </div>
 
                     {!isMentee && (
-                        <div className="flex flex-row items-center justify-between rounded-lg border p-4 bg-slate-50">
-                            <div className="space-y-0.5">
-                                <Label className="text-base flex items-center gap-2">
-                                    <Lock className="w-4 h-4 text-slate-500" />
-                                    Nota Privada
-                                </Label>
-                                <p className="text-sm text-muted-foreground">
-                                    Solo visible para ti y la supervisión.
-                                </p>
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="type">Visibilidad y Tipo</Label>
                             <Controller
                                 control={control}
-                                name="isPrivate"
+                                name="type"
                                 render={({ field }) => (
-                                    <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <SelectTrigger id="type">
+                                            <SelectValue placeholder="Seleccionar tipo" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="SHARED">Compartida (Guiado + Mentores)</SelectItem>
+                                            <SelectItem value="INTERNAL">Interna (Solo Mentores)</SelectItem>
+                                            <SelectItem value="SUPERVISION">Supervisión (Mentores + Auditores)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 )}
                             />
+                            <p className="text-[10px] text-slate-500 italic">
+                                Define quién podrá leer esta nota en el futuro.
+                            </p>
                         </div>
                     )}
                 </form>

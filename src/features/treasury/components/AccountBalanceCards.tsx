@@ -11,9 +11,9 @@ interface AccountBalanceCardsProps {
 export function AccountBalanceCards({ accounts, transactions }: AccountBalanceCardsProps) {
     // Filter out only Asset/Liabilities for balance view
     const visibleAccounts = accounts.filter(a =>
-        a.type === AccountType.ASSET ||
-        a.type === AccountType.LIABILITY ||
-        a.type === AccountType.EQUITY
+        (a.type === AccountType.ASSET ||
+            a.type === AccountType.LIABILITY ||
+            a.type === AccountType.EQUITY) && !a.isArchived
     );
 
     // Calculate Global Monthly Stats from transactions

@@ -28,13 +28,14 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
             name: '',
             type: mode === 'account' ? AccountType.ASSET : 'income',
             currency: 'ARS',
-            balance: 0
+            balance: 0,
+            isArchived: false
         }
     });
 
     const { createAccount, isLoading: isCreating } = useAccounts();
     const { execute: updateAccount, isLoading: isUpdating } = useUpdateAccount();
-    const { createCategory, isLoading: isCreatingCategory } = useCategories(); // For category creation
+    const { createCategory, updateCategory, isLoading: isCreatingCategory } = useCategories(); // For category creation
 
     const isLoading = isCreating || isUpdating || isCreatingCategory;
 
@@ -45,16 +46,17 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
                 setValue('type', accountToEdit.type);
                 setValue('currency', accountToEdit.currency);
                 setValue('balance', accountToEdit.balance);
+                setValue('isArchived', accountToEdit.isArchived || false);
             } else if (categoryToEdit) {
                 setValue('name', categoryToEdit.name);
                 setValue('type', categoryToEdit.type);
-                // Categories don't have currency/balance
             } else {
                 reset({
                     name: '',
                     type: mode === 'account' ? AccountType.ASSET : 'income',
                     currency: 'ARS',
-                    balance: 0
+                    balance: 0,
+                    isArchived: false
                 });
             }
         }
@@ -67,33 +69,44 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
         };
 
         if (mode === 'category') {
+            const payload: any = {
+                name: data.name,
+                isArchived: data.isArchived
+            };
+
+            if (!categoryToEdit || !categoryToEdit.hasTransactions) {
+                payload.type = data.type;
+            }
+
             if (categoryToEdit) {
-                // TODO: Add updateCategory to hook
-                console.log("Update Category", categoryToEdit.id, data);
-                // For now, close. 
+                await updateCategory(categoryToEdit.id, payload);
                 onSuccess();
             } else {
                 await createCategory({
-                    name: data.name,
-                    type: data.type,
+                    ...payload,
                     churchId: 'auto'
                 });
                 onSuccess();
             }
         } else {
             // Account Logic
-            const payload: CreateAccountDto = {
+            const payload: any = {
                 name: data.name,
-                type: data.type,
-                currency: data.currency,
-                balance: Number(data.balance),
-                churchId: ''
+                isArchived: data.isArchived
             };
 
-            if (accountToEdit) {
-                await updateAccount(accountToEdit.id, payload, onSuccess);
-            } else {
+            // Only send type/currency if they are editable (new or no transactions)
+            if (!accountToEdit || !accountToEdit.hasTransactions) {
+                payload.type = data.type;
+                payload.currency = data.currency;
+            }
+
+            if (!accountToEdit) {
+                payload.balance = Number(data.balance);
+                payload.churchId = '';
                 await createAccount(payload, onSuccess);
+            } else {
+                await updateAccount(accountToEdit.id, payload, onSuccess);
             }
         }
     };
@@ -102,6 +115,7 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
     const handleCurrencyChange = (value: string) => setValue('currency', value);
 
     const isCategoryMode = mode === 'category';
+    const hasTransactions = accountToEdit?.hasTransactions || false;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -122,7 +136,11 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label>Tipo</Label>
-                            <Select onValueChange={handleTypeChange} defaultValue={watch('type')}>
+                            <Select
+                                onValueChange={handleTypeChange}
+                                defaultValue={watch('type')}
+                                disabled={!isCategoryMode && hasTransactions}
+                            >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Tipo" />
                                 </SelectTrigger>
@@ -140,12 +158,19 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
                                     )}
                                 </SelectContent>
                             </Select>
+                            {((!isCategoryMode && hasTransactions) || (isCategoryMode && categoryToEdit?.hasTransactions)) && (
+                                <span className="text-[10px] text-amber-600 font-medium">Bloqueado por movimientos</span>
+                            )}
                         </div>
 
                         {!isCategoryMode && (
                             <div className="grid gap-2">
                                 <Label>Moneda</Label>
-                                <Select onValueChange={handleCurrencyChange} defaultValue={accountToEdit?.currency || "ARS"}>
+                                <Select
+                                    onValueChange={handleCurrencyChange}
+                                    defaultValue={accountToEdit?.currency || "ARS"}
+                                    disabled={hasTransactions}
+                                >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Moneda" />
                                     </SelectTrigger>
@@ -168,7 +193,21 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
                                 {...register("balance", { required: true })}
                                 disabled={!!accountToEdit}
                             />
-                            {accountToEdit && <span className="text-xs text-muted-foreground">El balance se ajusta mediante transacciones.</span>}
+                            {accountToEdit && <span className="text-[10px] text-muted-foreground">El balance se ajusta mediante transacciones.</span>}
+                        </div>
+                    )}
+
+                    {(accountToEdit || categoryToEdit) && (
+                        <div className="flex items-center space-x-2 pt-2 border-t">
+                            <input
+                                type="checkbox"
+                                id="isArchived"
+                                {...register("isArchived")}
+                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                            />
+                            <Label htmlFor="isArchived" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                {isCategoryMode ? 'Archivar categoría (No aparecerá en nuevos movimientos)' : 'Archivar cuenta (No aparecerá en nuevos movimientos)'}
+                            </Label>
                         </div>
                     )}
 
@@ -178,7 +217,7 @@ export function AccountDialog({ open, onOpenChange, accountToEdit, categoryToEdi
                         </Button>
                         <Button type="submit" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {accountToEdit ? 'Guardar' : 'Crear'}
+                            {accountToEdit ? 'Guardar Cambios' : 'Crear'}
                         </Button>
                     </DialogFooter>
                 </form>

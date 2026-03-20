@@ -39,7 +39,8 @@ export const toUiTransaction = (dto: TreasuryTransactionDto): TreasuryTransactio
         type: dto.type,
         reversalId: dto.reversalId,
         correctionId: dto.correctionId,
-        isCorrection: dto.isCorrection
+        isCorrection: !!dto.isCorrection,
+        isInvalidated: !!dto.isInvalidated
     };
 };
 
@@ -50,6 +51,8 @@ export const toUiAccount = (dto: TreasuryAccountDto): TreasuryAccountModel => {
         type: dto.type,
         balance: Number(dto.balance),
         currency: dto.currency,
+        isArchived: !!dto.isArchived,
+        hasTransactions: !!dto.hasTransactions,
         formattedBalance: `$${Number(dto.balance).toLocaleString()}`
     };
 };

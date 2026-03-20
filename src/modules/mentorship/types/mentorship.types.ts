@@ -3,6 +3,14 @@ export type MentorshipMode = 'FORMAL' | 'INFORMAL';
 
 export type MentorshipStatus = 'ACTIVE' | 'CLOSED' | 'PAUSED';
 
+export interface MentorshipParticipant {
+    id: string;
+    churchPersonId: string;
+    role: 'MENTOR' | 'PARTICIPANT';
+    status: 'PENDING' | 'AUTO_ACCEPTED' | 'ACCEPTED';
+    joinedAt: string;
+}
+
 export interface MentorshipSummary {
     id: string;
     type: MentorshipType;
@@ -10,6 +18,11 @@ export interface MentorshipSummary {
     createdAt: string;
     mentor?: { id: string; name: string };
     mentee?: { id: string; name: string };
+    motive?: string;
+    mode?: MentorshipMode;
+    mentorSummary?: string;
+    menteeSummary?: string;
+    participants?: MentorshipParticipant[];
 }
 
 export interface PaginatedMentorshipResponse {
@@ -44,11 +57,12 @@ export interface CreateMentorshipMeetingDto {
     description?: string;
     color?: string;
     location?: string;
+    type?: string; 
 }
 
 export interface CreateMentorshipNoteDto {
     content: string;
-    isPrivate: boolean;
+    type: 'INTERNAL' | 'SHARED' | 'SUPERVISION';
     meetingId?: string;
 }
 
@@ -58,4 +72,6 @@ export interface CreateMentorshipTaskDto {
     dueDate?: string; // ISO string
     isGroupTask: boolean;
     assignedChurchPersonId?: string;
+    mentorInstruction?: string;
+    meetingId?: string;
 }

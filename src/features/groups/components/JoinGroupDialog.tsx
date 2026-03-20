@@ -50,7 +50,7 @@ export function JoinGroupDialog({ open, onOpenChange, family, groupId, currentMe
         try {
             // Enroll each selected person sequentially to avoid potential race conditions if backend requires it
             for (const memberId of Array.from(selectedMembers)) {
-                await addParticipant(groupId, memberId, 'MEMBER');
+                await addParticipant(groupId, memberId, 'PARTICIPANT');
             }
             toast.success(`Inscripción completada exitosamente`);
             onSuccess();

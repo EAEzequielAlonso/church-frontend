@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Lock, Unlock, AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Lock, Unlock, AlertCircle, CheckCircle2, AlertTriangle, FileSearch } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePeriods } from '../hooks/usePeriods';
 import { usePendingTransactionsCount } from '../hooks/usePendingTransactionsCount';
@@ -13,9 +13,10 @@ import { toast } from 'sonner';
 interface PeriodClosingPanelProps {
     year: number;
     month: number;
+    onViewReport?: (year: number, month: number) => void;
 }
 
-export function PeriodClosingPanel({ year, month }: PeriodClosingPanelProps) {
+export function PeriodClosingPanel({ year, month, onViewReport }: PeriodClosingPanelProps) {
     const { churchId } = useAuth();
     const { period, isLoading, closePeriod, isClosing, reopenPeriod, isReopening } = usePeriods(churchId || '', year, month);
     const { count: pendingCount, isLoading: isPendingLoading } = usePendingTransactionsCount(churchId || '', year, month);
@@ -70,6 +71,12 @@ export function PeriodClosingPanel({ year, month }: PeriodClosingPanelProps) {
                             <Lock className="h-5 w-5" />
                             <CardTitle>Período Contable Cerrado</CardTitle>
                         </div>
+                        {onViewReport && (
+                            <Button variant="ghost" size="sm" onClick={() => onViewReport(year, month)} className="text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+                                <FileSearch className="h-4 w-4 mr-2" />
+                                Ver Reporte de Cierre
+                            </Button>
+                        )}
                     </div>
                     <CardDescription>
                         Cerrado el {new Date(period.closedAt!).toLocaleDateString('es-AR', { dateStyle: 'long' })}
@@ -109,9 +116,17 @@ export function PeriodClosingPanel({ year, month }: PeriodClosingPanelProps) {
         <>
             <Card className={pendingCount > 0 ? "border-amber-100 bg-amber-50/10" : "border-emerald-100 bg-emerald-50/10"}>
                 <CardHeader>
-                    <div className="flex items-center gap-2 text-emerald-700">
-                        <Unlock className="h-5 w-5" />
-                        <CardTitle>Período Contable Abierto</CardTitle>
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-emerald-700">
+                            <Unlock className="h-5 w-5" />
+                            <CardTitle>Período Contable Abierto</CardTitle>
+                        </div>
+                        {onViewReport && (
+                            <Button variant="outline" size="sm" onClick={() => onViewReport(year, month)} className="text-slate-600 border-slate-200">
+                                <FileSearch className="h-4 w-4 mr-2" />
+                                Ver detalle del mes
+                            </Button>
+                        )}
                     </div>
                     <CardDescription>
                         El período se encuentra activo y recibiendo transacciones financieras.

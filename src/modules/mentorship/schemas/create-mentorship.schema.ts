@@ -7,7 +7,7 @@ export const createMentorshipSchema = z.object({
     mentors: z.array(z.object({
         churchPersonId: z.string(),
         hasUserAccount: z.boolean()
-    })).min(1, "Debe seleccionar al menos un mentor"),
+    })).default([]),
     participants: z.array(z.object({
         churchPersonId: z.string(),
         hasUserAccount: z.boolean()
@@ -45,6 +45,14 @@ export const createMentorshipSchema = z.object({
                 code: z.ZodIssueCode.custom,
                 message: "Un proceso informal solo permite 1 persona guiada máxima",
                 path: ['participants']
+            });
+        }
+    } else if (data.mode === 'FORMAL') {
+        if (data.mentors.length < 1) {
+             ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Debe seleccionar al menos un mentor para procesos formales",
+                path: ['mentors']
             });
         }
     }

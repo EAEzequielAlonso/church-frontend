@@ -7,21 +7,20 @@ import { TreasuryTransactionModel } from '../types/treasury.types';
 export function useTransactions(filters: any = {}) {
     const { churchId } = useAuth();
 
-    // Create a stable key based on filters
-    const { type } = filters; // Assuming 'type' is part of filters
-    const key = churchId ? `/treasury/transactions?churchId=${churchId}${type ? `&type=${type}` : ''}` : null;
+    // Create a stable key based on ALL filters
+    const key = churchId ? `/treasury/transactions?churchId=${churchId}&${JSON.stringify(filters)}` : null;
 
-    const { data: transactions, error, isLoading, mutate } = useSWR<TreasuryTransactionModel[]>(
+    const { data: response, error, isLoading, mutate } = useSWR(
         key,
-        () => treasuryApi.transactions.getAll(churchId!, { type }).then((dtos: any[]) => dtos.map(mapper.toUiTransaction))
+        () => treasuryApi.transactions.getAll(churchId!, filters)
     );
 
-    // The API now directly returns an array of DTOs and we map them to UI Models.
-    // Backend GetTransactionsUseCase currently returns TreasuryTransactionDto[].
-    const transactions_list = transactions || [];
+    // Mapped UI Models from the paginated backend response
+    const transactions_list = Array.isArray(response?.data) 
+        ? response.data.map((dto: any) => mapper.toUiTransaction(dto)) 
+        : [];
 
-    // Optional: if backend ever restores pagination, update both treasuryApi and this hook.
-    const meta = {
+    const meta = response?.meta || {
         total: transactions_list.length,
         page: 1,
         lastPage: 1

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -13,13 +14,12 @@ interface AddParticipantDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     currentParticipants: GroupParticipantDto[];
-    onAdd: (churchPersonId: string, role: GroupRole) => Promise<void>;
+    onAdd: (churchPersonIds: string[]) => Promise<void>;
 }
 
 export function AddParticipantDialog({ open, onOpenChange, currentParticipants, onAdd }: AddParticipantDialogProps) {
     const { persons, isLoading } = useChurchPersons();
-    const [selectedPersonId, setSelectedPersonId] = useState<string>('');
-    const [selectedRole, setSelectedRole] = useState<GroupRole>('PARTICIPANT');
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -36,17 +36,28 @@ export function AddParticipantDialog({ open, onOpenChange, currentParticipants, 
 
     const displayPersons = searchTerm ? filteredPersons : filteredPersons.slice(0, 15);
 
+    const toggleSelection = (id: string) => {
+        const next = new Set(selectedIds);
+        if (next.has(id)) {
+            next.delete(id);
+        } else {
+            next.add(id);
+        }
+        setSelectedIds(next);
+    };
+
     const handleSubmit = async () => {
-        if (!selectedPersonId) return;
+        if (selectedIds.size === 0) return;
         setIsSubmitting(true);
         try {
-            await onAdd(selectedPersonId, selectedRole);
-            setSelectedPersonId('');
-            setSelectedRole('PARTICIPANT');
+            await onAdd(Array.from(selectedIds));
+            setSelectedIds(new Set());
             setSearchTerm('');
             onOpenChange(false);
-        } catch (error) {
-            // handle error if needed
+        } catch (error: any) {
+            console.error('Error adding participants:', error);
+            const message = error.response?.data?.message || 'Error al añadir los participantes';
+            toast.error(message);
         } finally {
             setIsSubmitting(false);
         }
@@ -55,16 +66,16 @@ export function AddParticipantDialog({ open, onOpenChange, currentParticipants, 
     return (
         <Dialog open={open} onOpenChange={(val) => {
             if (!val) {
-                setSelectedPersonId('');
+                setSelectedIds(new Set());
                 setSearchTerm('');
             }
             onOpenChange(val);
         }}>
             <DialogContent className="sm:max-w-[450px]">
                 <DialogHeader>
-                    <DialogTitle>Añadir Participante</DialogTitle>
+                    <DialogTitle>Añadir Participantes</DialogTitle>
                     <DialogDescription>
-                        Busca en el directorio de la iglesia y asígnale un rol en este grupo.
+                        Selecciona a las personas que deseas añadir a este grupo. Todos entrarán con el rol de **Participante**.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -81,77 +92,79 @@ export function AddParticipantDialog({ open, onOpenChange, currentParticipants, 
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Seleccionar</Label>
+                        <div className="flex justify-between items-center">
+                            <Label>Directorio ({selectedIds.size} seleccionados)</Label>
+                            {selectedIds.size > 0 && (
+                                <button 
+                                    onClick={() => setSelectedIds(new Set())}
+                                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                                >
+                                    Limpiar selección
+                                </button>
+                            )}
+                        </div>
                         {isLoading ? (
                             <div className="flex items-center justify-center p-4 border rounded-md">
                                 <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
                             </div>
                         ) : (
-                            <div className="border rounded-md">
-                                <ScrollArea className="h-[200px]">
+                            <div className="border rounded-md shadow-sm overflow-hidden">
+                                <ScrollArea className="h-[250px]">
                                     {displayPersons.length === 0 ? (
-                                        <div className="p-4 text-center text-sm text-slate-500">
-                                            No se encontraron personas disponibles.
+                                        <div className="p-8 text-center text-sm text-slate-500">
+                                            No se encontraron personas disponibles que no estén ya en el grupo.
                                         </div>
                                     ) : (
                                         <div className="p-1">
                                             {!searchTerm && (
-                                                <div className="px-2 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                                                <div className="px-2 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50 mb-1">
                                                     Sugerencias
                                                 </div>
                                             )}
-                                            {displayPersons.map(p => (
-                                                <div
-                                                    key={p.id}
-                                                    onClick={() => setSelectedPersonId(p.id)}
-                                                    className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${selectedPersonId === p.id ? 'bg-indigo-50 border-indigo-200 border' : 'hover:bg-slate-50 border border-transparent'}`}
-                                                >
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarImage src={p.person?.profileImage} />
-                                                        <AvatarFallback className="bg-slate-200 text-xs">
-                                                            {p.person?.firstName?.[0]}{p.person?.lastName?.[0]}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="flex flex-col flex-1">
-                                                        <span className="text-sm font-medium text-slate-900 leading-tight">{p.person?.fullName}</span>
-                                                        <span className="text-xs text-slate-500">{p.membershipStatus}</span>
+                                            {displayPersons.map(p => {
+                                                const isSelected = selectedIds.has(p.id);
+                                                return (
+                                                    <div
+                                                        key={p.id}
+                                                        onClick={() => toggleSelection(p.id)}
+                                                        className={`flex items-center gap-3 p-2.5 rounded-md cursor-pointer transition-all ${isSelected ? 'bg-indigo-50 border-indigo-200 border' : 'hover:bg-slate-50 border border-transparent'}`}
+                                                    >
+                                                        <Avatar className="h-9 w-9 border border-slate-200">
+                                                            <AvatarImage src={p.person?.profileImage} />
+                                                            <AvatarFallback className="bg-slate-100 text-slate-600 text-[10px]">
+                                                                {p.person?.firstName?.[0]}{p.person?.lastName?.[0]}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col flex-1 min-w-0">
+                                                            <span className="text-sm font-semibold text-slate-800 truncate">{p.person?.fullName}</span>
+                                                            <span className="text-[10px] text-slate-500 font-medium uppercase">{p.membershipStatus}</span>
+                                                        </div>
+                                                        <div className={`w-5 h-5 rounded border transition-colors flex items-center justify-center ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
+                                                            {isSelected && <div className="w-2.5 h-1 border-l-2 border-b-2 border-white -rotate-45 mb-0.5" />}
+                                                        </div>
                                                     </div>
-                                                    <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center">
-                                                        {selectedPersonId === p.id && <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full" />}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </ScrollArea>
                             </div>
                         )}
                     </div>
-
-                    <div className="space-y-2">
-                        <Label>Rol del Participante</Label>
-                        <Select value={selectedRole} onValueChange={(val) => setSelectedRole(val as GroupRole)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Rol" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="COORDINATOR">Coordinador</SelectItem>
-                                <SelectItem value="TEACHER">Maestro</SelectItem>
-                                <SelectItem value="PARTICIPANT">Participante</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
                 </div>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                <DialogFooter className="bg-slate-50 p-4 -mx-6 -mb-6 border-t border-slate-100">
+                    <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={!selectedPersonId || isSubmitting}
-                        className="bg-indigo-600 hover:bg-indigo-700"
+                        disabled={selectedIds.size === 0 || isSubmitting}
+                        className="bg-indigo-600 hover:bg-indigo-700 shadow-md transition-all active:scale-95"
                     >
                         {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                        Añadir al Grupo
+                        {selectedIds.size > 0 
+                            ? `Añadir ${selectedIds.size} participante${selectedIds.size > 1 ? 's' : ''}` 
+                            : 'Selecciona participantes'
+                        }
                     </Button>
                 </DialogFooter>
             </DialogContent>
